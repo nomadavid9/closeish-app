@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { LoadScript, GoogleMap } from '@react-google-maps/api';
 
+const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+const MAP_ID = import.meta.env.VITE_GOOGLE_MAP_ID;
 const libraries: ('places' | 'marker')[] = ['places', 'marker'];
 
 const App: React.FC = () => {
@@ -57,7 +59,7 @@ const App: React.FC = () => {
       <h1>Closeish.app</h1>
       {position ? (
         <LoadScript 
-          googleMapsApiKey="AIzaSyBoRUGEUtxPGxcrgLiRGGshyoILYZuMRSI" 
+          googleMapsApiKey={API_KEY} 
           libraries={libraries} 
           version="beta"
         >
@@ -68,7 +70,7 @@ const App: React.FC = () => {
             center={position}
             zoom={15}
             options={{
-              mapId: 'ca79a2ddce39025d',
+              mapId: MAP_ID,
             }}
             onLoad={(map) => {
               mapRef.current = map;
