@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { LoadScript, GoogleMap } from '@react-google-maps/api';
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -7,9 +7,9 @@ const libraries: ('places' | 'marker')[] = ['places', 'marker'];
 
 const App: React.FC = () => {
   const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
+  const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
 
-  /* This is where we fetch the user geolocation */
+  /* This is where we fetch the user's geolocation */
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -30,7 +30,7 @@ const App: React.FC = () => {
 
   // Load the AdvancedMarkerElement when the map and position are ready
   useEffect(() => {
-    if (position && mapRef.current) {
+    if (position && mapInstance) {
       const loadMarker = async () => {
         try {
           // Import the AdvancedMarkerElement library
@@ -40,7 +40,7 @@ const App: React.FC = () => {
 
           // Create the AdvancedMarkerElement
           new AdvancedMarkerElement({
-            map: mapRef.current!,
+            map: mapInstance,
             position: position,
             title: 'You are here',
           });
@@ -51,20 +51,20 @@ const App: React.FC = () => {
 
       loadMarker();
     }
-  }, [position, mapRef]);
+  }, [position, mapInstance]);
 
-  /*This is where the map is actually rendered within the html*/
+  /* This is where the map is actually rendered within the HTML */
   return (
     <div>
       <h1>Closeish.app</h1>
       {position ? (
-        <LoadScript 
-          googleMapsApiKey={API_KEY} 
-          libraries={libraries} 
+        <LoadScript
+          googleMapsApiKey={API_KEY}
+          libraries={libraries}
           version="beta"
         >
-          <p>Latitude: {position?.lat}</p>
-          <p>Longitude: {position?.lng}</p>
+          <p>Latitude: {position.lat}</p>
+          <p>Longitude: {position.lng}</p>
           <GoogleMap
             mapContainerStyle={{ width: '100vw', height: '100vh' }}
             center={position}
@@ -73,7 +73,7 @@ const App: React.FC = () => {
               mapId: MAP_ID,
             }}
             onLoad={(map) => {
-              mapRef.current = map;
+              setMapInstance(map);
             }}
           >
             {/* The AdvancedMarkerElement will be added via useEffect */}
@@ -83,97 +83,7 @@ const App: React.FC = () => {
         <p>Loading map...</p>
       )}
     </div>
-  );  
-
+  );
 };
 
 export default App;
-
-
-// import React, { useState, useEffect } from 'react';
-// import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
-
-// const App: React.FC = () => {
-//   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-
-//   // Get user's geolocation
-//   useEffect(() => {
-//     if (navigator.geolocation) {
-//       navigator.geolocation.getCurrentPosition(
-//         (position) => {
-//           setLocation({
-//             lat: position.coords.latitude,
-//             lng: position.coords.longitude,
-//           });
-//         },
-//         (error) => {
-//           console.error('Error getting location: ', error);
-//         }
-//       );
-//     } else {
-//       console.error('Geolocation not supported by this browser.');
-//     }
-//   }, []);
-
-//   const containerStyle = {
-//     width: '100vw',
-//     height: '100vh',
-//   };
-
-//   return (
-//     <div>
-//       <h1>My Location</h1>
-//       {location ? (
-//         <div>
-//           <p>Latitude: {location.lat}</p>
-//           <p>Longitude: {location.lng}</p>
-//           <LoadScript googleMapsApiKey="AIzaSyBoRUGEUtxPGxcrgLiRGGshyoILYZuMRSI">
-//             <GoogleMap mapContainerStyle={containerStyle} center={location} zoom={15}>
-//             </GoogleMap>
-//           </LoadScript>
-//         </div>
-//       ) : (
-//         <p>Loading location...</p>
-//       )}
-//     </div>
-//   );
-// };
-
-// export default App;
-
-
-// import { useState } from 'react'
-// import reactLogo from './assets/react.svg'
-// import viteLogo from '/vite.svg'
-// import './App.css'
-
-// function App() {
-//   const [count, setCount] = useState(0)
-
-//   return (
-//     <>
-//       <div>
-//         <a href="https://vitejs.dev" target="_blank">
-//           <img src={viteLogo} className="logo" alt="Vite logo" />
-//         </a>
-//         <a href="https://react.dev" target="_blank">
-//           <img src={reactLogo} className="logo react" alt="React logo" />
-//         </a>
-//       </div>
-//       <h1>Vite + React</h1>
-//       <div className="card">
-//         <button onClick={() => setCount((count) => count + 1)}>
-//           count is {count}
-//         </button>
-//         <p>
-//           Edit <code>src/App.tsx</code> and save to test HMR
-//         </p>
-//       </div>
-//       <p className="read-the-docs">
-//         Click on the Vite and React logos to learn more
-//       </p>
-//     </>
-//   )
-// }
-
-// export default App
