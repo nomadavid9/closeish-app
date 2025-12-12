@@ -8,12 +8,18 @@ import {
   timeWindowOptions,
   walkVsTransitOptions,
 } from './types/filters';
+import { Place } from './types/places';
+import { fetchMockPlaces } from './services/places/mockPlaces';
+import { scorePlace } from './services/scoring/closishScore';
 import './App.css';
 
 const App: React.FC = () => {
   const [position, setPosition] = useState<Coordinates | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>(filterDefaults);
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [loadingPlaces, setLoadingPlaces] = useState<boolean>(false);
 
   const config = useMemo(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
@@ -49,6 +55,46 @@ const App: React.FC = () => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
+  useEffect(() => {
+    const loadPlaces = async () => {
+      setLoadingPlaces(true);
+      try {
+        const categoryMap = {
+          restaurants: 'restaurant',
+          cafes: 'cafe',
+          bars: 'bar',
+          parks: 'park',
+        } as const;
+
+        const results = await fetchMockPlaces({
+          origin: position,
+          categoryFilter: categoryMap[filters.placeType],
+        });
+        setPlaces(results);
+        setSelectedPlaceId((prev) => prev && results.find((p) => p.id === prev) ? prev : null);
+      } catch (error) {
+        console.error('Error loading mock places', error);
+        setPlaces([]);
+      } finally {
+        setLoadingPlaces(false);
+      }
+    };
+
+    loadPlaces();
+  }, [filters.placeType, position]);
+
+  const scoredPlaces = useMemo(() => {
+    const filtered = places.filter((place) => place.travel.walkMinutes <= filters.maxWalkMinutes + 10);
+    const scored = filtered.map((place) => ({ place, score: scorePlace(place, filters) }));
+    scored.sort((a, b) => b.score.closishScore - a.score.closishScore);
+    return scored;
+  }, [filters, places]);
+
+  const selectedPlace = useMemo(
+    () => (selectedPlaceId ? places.find((p) => p.id === selectedPlaceId) ?? null : null),
+    [places, selectedPlaceId]
+  );
+
   const renderMapState = () => {
     if (!config.isConfigured) {
       return (
@@ -79,7 +125,7 @@ const App: React.FC = () => {
       );
     }
 
-    return <MapView position={position} apiKey={config.apiKey!} mapId={config.mapId!} />;
+    return <MapView position={position} apiKey={config.apiKey!} mapId={config.mapId!} selectedPlace={selectedPlace} />;
   };
 
   const filterSummary = useMemo(() => {
@@ -217,6 +263,37 @@ const App: React.FC = () => {
               <p className="label">Config</p>
               <p className="value">{config.isConfigured ? 'Map keys loaded' : 'Missing map keys'}</p>
             </div>
+          </div>
+
+          <div className="list-panel">
+            <div className="list-header">
+              <h3>Nearby (mocked)</h3>
+              {loadingPlaces ? <p className="note">Loading…</p> : <p className="note">Offline stub for ranking</p>}
+            </div>
+            {scoredPlaces.length === 0 && !loadingPlaces ? (
+              <div className="empty">
+                <p>No places found for these filters yet.</p>
+              </div>
+            ) : (
+              <ul className="place-list">
+                {scoredPlaces.map(({ place, score }) => (
+                  <li
+                    key={place.id}
+                    className={`place-item ${selectedPlaceId === place.id ? 'selected' : ''}`}
+                    onClick={() => setSelectedPlaceId(place.id)}
+                  >
+                    <div className="place-main">
+                      <p className="value">{place.name}</p>
+                      <p className="note">{place.category} · score {score.closishScore.toFixed(0)}</p>
+                    </div>
+                    <div className="place-meta">
+                      <span>{place.travel.transitMinutes}m transit</span>
+                      <span>{place.travel.walkMinutes}m walk</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </section>
 
