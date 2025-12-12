@@ -26,7 +26,8 @@ const MapView: React.FC<MapViewProps> = ({ position, apiKey, mapId, selectedPlac
         markersRef.current.forEach((m) => m.map = null);
         markersRef.current = [];
 
-        mapInstance.setCenter(position);
+        const focus = selectedPlace?.location ?? position;
+        mapInstance.setCenter(focus);
 
         const userMarker = new AdvancedMarkerElement({
           map: mapInstance,

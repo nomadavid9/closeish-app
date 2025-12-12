@@ -15,7 +15,11 @@ export const scorePlace = (place: Place, filters: FilterState): PlaceScore => {
   const preferenceTilt =
     filters.walkVsTransit === 'favor_transit' ? 1.0 : filters.walkVsTransit === 'balanced' ? 0.8 : 0.6;
 
-  const closishScore = clamp((transitBias * preferenceTilt) + walkPenalty + desirability, 0, 100);
+   // Live/when modifiers (light touch for mocks)
+  const modeTilt = filters.liveMode ? 1 : 0.95;
+  const whenTilt = filters.when === 'now' ? 1 : filters.timeWindow === 'next_30' ? 0.98 : filters.timeWindow === 'next_60' ? 0.96 : 0.94;
+
+  const closishScore = clamp((transitBias * preferenceTilt * modeTilt * whenTilt) + walkPenalty + desirability, 0, 100);
 
   return {
     closishScore,
