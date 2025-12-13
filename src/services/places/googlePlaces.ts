@@ -59,7 +59,6 @@ export type NearbyParams = {
 };
 
 export const fetchGoogleNearby = async ({ origin, category, radiusMeters, maxResults }: NearbyParams): Promise<Place[]> => {
-  await google.maps.importLibrary('places');
   if (!google.maps.places?.PlacesService) {
     throw new Error('PlacesService not available');
   }

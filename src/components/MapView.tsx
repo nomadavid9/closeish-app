@@ -1,23 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { GoogleMap, LoadScript } from '@react-google-maps/api';
+import { GoogleMap } from '@react-google-maps/api';
 import { Coordinates } from '../types/geo';
 import { Place } from '../types/places';
 
-const libraries: ('places' | 'marker')[] = ['places', 'marker'];
-
 export type MapViewProps = {
   position: Coordinates;
-  apiKey: string;
   mapId: string;
   selectedPlace?: Place | null;
+  isLoaded: boolean;
 };
 
-const MapView: React.FC<MapViewProps> = ({ position, apiKey, mapId, selectedPlace }) => {
+const MapView: React.FC<MapViewProps> = ({ position, mapId, selectedPlace, isLoaded }) => {
   const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
 
   useEffect(() => {
-    if (!position || !mapInstance) return;
+    if (!position || !mapInstance || !isLoaded) return;
 
     const loadMarkers = async () => {
       try {
@@ -52,16 +50,18 @@ const MapView: React.FC<MapViewProps> = ({ position, apiKey, mapId, selectedPlac
     loadMarkers();
   }, [position, mapInstance, selectedPlace]);
 
+  if (!isLoaded) {
+    return null;
+  }
+
   return (
-    <LoadScript googleMapsApiKey={apiKey} libraries={libraries} version="beta">
-      <GoogleMap
-        mapContainerClassName="map-container"
-        center={position}
-        zoom={15}
-        options={{ mapId }}
-        onLoad={setMapInstance}
-      />
-    </LoadScript>
+    <GoogleMap
+      mapContainerClassName="map-container"
+      center={position}
+      zoom={15}
+      options={{ mapId }}
+      onLoad={setMapInstance}
+    />
   );
 };
 

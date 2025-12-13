@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useJsApiLoader } from '@react-google-maps/api';
 import MapView from './components/MapView';
 import { Coordinates } from './types/geo';
 import {
@@ -36,6 +37,12 @@ const App: React.FC = () => {
     };
   }, []);
 
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: config.apiKey ?? '',
+    libraries: ['places', 'marker'],
+  });
+
   useEffect(() => {
     if (!navigator.geolocation) {
       setGeoError('Geolocation is not supported by this browser.');
@@ -62,7 +69,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!position) return;
 
-    const shouldUseLive = Boolean(filters.liveMode && config.isConfigured);
+    const shouldUseLive = Boolean(filters.liveMode && config.isConfigured && isLoaded && !loadError);
     const categoryMap = {
       restaurants: 'restaurant',
       cafes: 'cafe',
@@ -107,7 +114,7 @@ const App: React.FC = () => {
     };
 
     loadPlaces();
-  }, [filters.liveMode, filters.placeType, position, config.isConfigured]);
+  }, [filters.liveMode, filters.placeType, position, config.isConfigured, isLoaded, loadError]);
 
   const scoredPlaces = useMemo(() => {
     const filtered = places.filter((place) => place.travel.walkMinutes <= filters.maxWalkMinutes + 10);
@@ -133,6 +140,24 @@ const App: React.FC = () => {
       );
     }
 
+    if (loadError) {
+      return (
+        <div className="state-card error">
+          <h3>Map load issue</h3>
+          <p>{String(loadError)}</p>
+        </div>
+      );
+    }
+
+    if (!isLoaded) {
+      return (
+        <div className="state-card">
+          <h3>Loading map…</h3>
+          <p>Fetching map libraries.</p>
+        </div>
+      );
+    }
+
     if (geoError) {
       return (
         <div className="state-card error">
@@ -151,7 +176,7 @@ const App: React.FC = () => {
       );
     }
 
-    return <MapView position={position} apiKey={config.apiKey!} mapId={config.mapId!} selectedPlace={selectedPlace} />;
+    return <MapView position={position} mapId={config.mapId!} selectedPlace={selectedPlace} isLoaded={isLoaded} />;
   };
 
   const filterSummary = useMemo(() => {
