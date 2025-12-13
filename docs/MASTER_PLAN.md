@@ -3,8 +3,9 @@
 ## Current State
 - Vite + React 18 + TypeScript SPA; ESLint + TS build scripts.
 - App geolocates the user, loads Google Maps via `@react-google-maps/api`, and shows their position with an Advanced Marker using `VITE_GOOGLE_MAPS_API_KEY` and `VITE_GOOGLE_MAP_ID`.
-- Filter UI now controlled locally: live/plan toggle, place type select, when/time window chips, walk vs transit preference, and max walk slider. State is in-memory only.
-- Styling uses Closeish-inspired palette; no backend; no tests yet.
+- Filters are controlled locally: live/plan toggle, place type select, when/time window chips, walk vs transit preference, max walk slider. State is in-memory only.
+- Places: live Google Places Nearby search with mock fallback; ranked list/grid synced with map selection; loading/error states present; capped top-K for ranking.
+- Styling uses Closeish-inspired palette; no backend; no automated tests yet.
 
 ## Guiding Principles
 - Ship in small, stable increments; mobile-first UX; keep map usable after every phase.
@@ -56,7 +57,7 @@ Done: Auth flow + favorites stored; no regression to latency budgets.
 - v0.1 — Phase 1 shell: layout, placeholders, env guard, map componentized.
 - v0.2 — Phase 2 filters: controlled filter UI with local state (live/plan, place type, when/time window, walk vs transit, max walk).
 - v0.3 — Phase 3 mocks: mock places + scoring stub + ranked list.
-- v1.0 — Phase 4 latency-aware discovery with minimal real data + top-K pruning.
+- v1.0 — Phase 4 latency-aware discovery with minimal real data + top-K pruning + mock fallback.
 - v2.0 — Phase 5 edge caching + call budgeting.
 - v3.0 — Phase 6 transit intelligence (station-aware heuristics).
 - vNext — Optional accounts + favorites.
