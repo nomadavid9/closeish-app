@@ -50,6 +50,7 @@ Done: Auth flow + favorites stored; no regression to latency budgets.
 - Environment & Secrets: use `VITE_*` for frontend-exposed values; keep keys out of git; `.env.local` for dev, host-level env or `.env.production` for prod; include `.env.example` with placeholders; geolocation requires HTTPS in prod; keep the map config guard; plan an edge proxy in later phases to hide third-party secrets and add caching/quota controls; gate experiments with `VITE_FEATURE_*` flags.
 
 ## Release Log
+- See `docs/RELEASE_NOTES.md` for per-version details.
 - v0.0 — Proof-of-life: geolocation + Google Map + marker.
 - v0.1 — Phase 1 shell: layout, placeholders, env guard, map componentized.
 - v0.2 — Phase 2 filters: controlled filter UI with local state (live/plan, place type, when/time window, walk vs transit, max walk).
