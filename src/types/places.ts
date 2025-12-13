@@ -15,6 +15,7 @@ export type Place = {
   location: Coordinates;
   rating?: number;
   travel: TravelProxies;
+  source?: 'mock' | 'live';
 };
 
 export type PlaceScore = {

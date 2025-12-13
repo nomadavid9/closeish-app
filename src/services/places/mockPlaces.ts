@@ -9,6 +9,7 @@ const MOCK_PLACES: Place[] = [
     location: { lat: 37.776, lng: -122.417 },
     rating: 4.5,
     travel: { walkMinutes: 10, transitMinutes: 8, driveMinutes: 6 },
+    source: 'mock',
   },
   {
     id: 'p2',
@@ -17,6 +18,7 @@ const MOCK_PLACES: Place[] = [
     location: { lat: 37.78, lng: -122.412 },
     rating: 4.2,
     travel: { walkMinutes: 14, transitMinutes: 9, driveMinutes: 8 },
+    source: 'mock',
   },
   {
     id: 'p3',
@@ -25,6 +27,7 @@ const MOCK_PLACES: Place[] = [
     location: { lat: 37.772, lng: -122.423 },
     rating: 4.7,
     travel: { walkMinutes: 18, transitMinutes: 12, driveMinutes: 10 },
+    source: 'mock',
   },
   {
     id: 'p4',
@@ -33,6 +36,7 @@ const MOCK_PLACES: Place[] = [
     location: { lat: 37.785, lng: -122.418 },
     rating: 4.3,
     travel: { walkMinutes: 12, transitMinutes: 10, driveMinutes: 7 },
+    source: 'mock',
   },
 ];
 
