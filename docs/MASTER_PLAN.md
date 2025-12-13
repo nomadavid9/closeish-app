@@ -11,6 +11,7 @@
 - Optimize for low latency and few external calls; progressive enhancement and early pruning.
 - Prefer mocks/stubs until APIs are chosen; add a thin edge layer only when it clearly adds caching/budgeting value.
 - Structure for clarity: `components/`, `services/`, `types/`, `utils/`, `styles/` as needed.
+- Working agreements for Codex are documented in `docs/CONTRIBUTING.md` (intent first, `npm version` for bumps, suggested commits/files per change, no manual lockfile edits).
 
 ## Phased Roadmap
 ### Phase 1 (v0.1) — UI shell + structure
