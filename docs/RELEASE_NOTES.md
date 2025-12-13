@@ -1,5 +1,11 @@
 # Closeish Release Notes
 
+## v1.0 — Latency-aware live data with fallback (Phase 4)
+- Added Google Places Nearby search path for live data with mock fallback when keys/errors occur.
+- Integrated live results into existing ranking, filters, and map/list selection sync; map recenters on selection and shows user + selection markers.
+- Capped results/top-K to reduce API fan-out; surfaced loading/error/fallback states and source badges (live vs mock).
+- Tests: none yet (manual verification). Env: `VITE_GOOGLE_MAPS_API_KEY`, `VITE_GOOGLE_MAP_ID` required; Places enabled.
+
 ## v0.3 — Mock places + scoring stub (Phase 3)
 - Added mock Places service and lightweight `closish_score` stub to rank sample destinations without external calls.
 - Rendered ranked list/grid with selection syncing to the map; map recenters and marks the selected place alongside the user.
