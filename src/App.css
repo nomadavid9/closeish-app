@@ -170,6 +170,12 @@
   margin-bottom: 8px;
 }
 
+.list-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .place-list {
   list-style: none;
   margin: 0;
@@ -220,6 +226,31 @@
 .empty {
   padding: 12px;
   color: rgba(15, 23, 42, 0.65);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid transparent;
+}
+
+.badge-live {
+  background: rgba(22, 61, 109, 0.1);
+  color: var(--navy);
+  border-color: rgba(22, 61, 109, 0.2);
+}
+
+.badge-mock {
+  background: rgba(242, 102, 34, 0.1);
+  color: var(--orange);
+  border-color: rgba(242, 102, 34, 0.2);
+}
+
+.note.error {
+  color: var(--orange);
 }
 
 .map-shell {

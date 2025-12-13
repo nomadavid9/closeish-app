@@ -10,7 +10,9 @@ import {
 } from './types/filters';
 import { Place } from './types/places';
 import { fetchMockPlaces } from './services/places/mockPlaces';
+import { fetchGoogleNearby } from './services/places/googlePlaces';
 import { scorePlace } from './services/scoring/closishScore';
+import { PLACES_TOP_K } from './config/dataSources';
 import './App.css';
 
 const App: React.FC = () => {
@@ -20,6 +22,8 @@ const App: React.FC = () => {
   const [places, setPlaces] = useState<Place[]>([]);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [loadingPlaces, setLoadingPlaces] = useState<boolean>(false);
+  const [placesSource, setPlacesSource] = useState<'mock' | 'live'>('mock');
+  const [placesError, setPlacesError] = useState<string | null>(null);
 
   const config = useMemo(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
@@ -56,38 +60,60 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
+    if (!position) return;
+
+    const shouldUseLive = Boolean(filters.liveMode && config.isConfigured);
+    const categoryMap = {
+      restaurants: 'restaurant',
+      cafes: 'cafe',
+      bars: 'bar',
+      parks: 'park',
+    } as const;
+
     const loadPlaces = async () => {
       setLoadingPlaces(true);
+      setPlacesError(null);
       try {
-        const categoryMap = {
-          restaurants: 'restaurant',
-          cafes: 'cafe',
-          bars: 'bar',
-          parks: 'park',
-        } as const;
+        if (shouldUseLive) {
+          try {
+            const liveResults = await fetchGoogleNearby({
+              origin: position,
+              category: categoryMap[filters.placeType],
+            });
+            setPlaces(liveResults);
+            setPlacesSource('live');
+            setSelectedPlaceId((prev) => prev && liveResults.find((p) => p.id === prev) ? prev : null);
+            return;
+          } catch (error) {
+            console.warn('Live places failed, falling back to mock', error);
+            setPlacesError('Live data unavailable, showing mock results.');
+          }
+        }
 
-        const results = await fetchMockPlaces({
+        const mockResults = await fetchMockPlaces({
           origin: position,
           categoryFilter: categoryMap[filters.placeType],
         });
-        setPlaces(results);
-        setSelectedPlaceId((prev) => prev && results.find((p) => p.id === prev) ? prev : null);
+        setPlaces(mockResults);
+        setPlacesSource('mock');
+        setSelectedPlaceId((prev) => prev && mockResults.find((p) => p.id === prev) ? prev : null);
       } catch (error) {
         console.error('Error loading mock places', error);
         setPlaces([]);
+        setPlacesSource('mock');
       } finally {
         setLoadingPlaces(false);
       }
     };
 
     loadPlaces();
-  }, [filters.placeType, position]);
+  }, [filters.liveMode, filters.placeType, position, config.isConfigured]);
 
   const scoredPlaces = useMemo(() => {
     const filtered = places.filter((place) => place.travel.walkMinutes <= filters.maxWalkMinutes + 10);
     const scored = filtered.map((place) => ({ place, score: scorePlace(place, filters) }));
     scored.sort((a, b) => b.score.closishScore - a.score.closishScore);
-    return scored;
+    return scored.slice(0, PLACES_TOP_K);
   }, [filters, places]);
 
   const selectedPlace = useMemo(
@@ -155,7 +181,7 @@ const App: React.FC = () => {
             <div>
               <p className="eyebrow">Filters</p>
               <h2>Tell us your vibe</h2>
-              <p className="muted">Phase 2: controls are live locally; no API calls yet.</p>
+              <p className="muted">Phase 4: live data when available, with mock fallback to stay fast.</p>
             </div>
             <button
               type="button"
@@ -267,8 +293,19 @@ const App: React.FC = () => {
 
           <div className="list-panel">
             <div className="list-header">
-              <h3>Nearby (mocked)</h3>
-              {loadingPlaces ? <p className="note">Loading…</p> : <p className="note">Offline stub for ranking</p>}
+              <div className="list-title">
+                <h3>Nearby ({placesSource === 'live' ? 'live' : 'mock'})</h3>
+                <span className={`badge ${placesSource === 'live' ? 'badge-live' : 'badge-mock'}`}>
+                  {placesSource === 'live' ? 'Live data' : 'Mock data'}
+                </span>
+              </div>
+              {loadingPlaces ? (
+                <p className="note">Loading…</p>
+              ) : placesError ? (
+                <p className="note error">{placesError}</p>
+              ) : (
+                <p className="note">Ranked locally; top candidates only.</p>
+              )}
             </div>
             {scoredPlaces.length === 0 && !loadingPlaces ? (
               <div className="empty">
