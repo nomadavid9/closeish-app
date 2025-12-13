@@ -50,6 +50,7 @@ Done: Auth flow + favorites stored; no regression to latency budgets.
 - Utilities: formatting, time windows, feature flags.
 - Testing: start with lightweight component tests once stateful UI appears; add contract tests when the edge layer exists.
 - Environment & Secrets: use `VITE_*` for frontend-exposed values; keep keys out of git; `.env.local` for dev, host-level env or `.env.production` for prod; include `.env.example` with placeholders; geolocation requires HTTPS in prod; keep the map config guard; plan an edge proxy in later phases to hide third-party secrets and add caching/quota controls; gate experiments with `VITE_FEATURE_*` flags.
+- Maps/Places API note: current live data uses PlacesService (legacy). For new customers, migrate to the new Places JS API (`google.maps.places.Place`) per Google’s migration guidance. Plan a future branch to replace Nearby search calls with the new API and retire legacy usage once verified.
 
 ## Release Log
 - See `docs/RELEASE_NOTES.md` for per-version details.
