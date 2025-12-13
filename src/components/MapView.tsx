@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { GoogleMap, LoadScript } from '@react-google-maps/api';
 import { Coordinates } from '../types/geo';
+import { Place } from '../types/places';
 
 const libraries: ('places' | 'marker')[] = ['places', 'marker'];
 
@@ -8,29 +9,48 @@ export type MapViewProps = {
   position: Coordinates;
   apiKey: string;
   mapId: string;
+  selectedPlace?: Place | null;
 };
 
-const MapView: React.FC<MapViewProps> = ({ position, apiKey, mapId }) => {
+const MapView: React.FC<MapViewProps> = ({ position, apiKey, mapId, selectedPlace }) => {
   const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
 
   useEffect(() => {
-    if (position && mapInstance) {
-      const loadMarker = async () => {
-        try {
-          const { AdvancedMarkerElement } = (await google.maps.importLibrary('marker')) as google.maps.MarkerLibrary;
-          new AdvancedMarkerElement({
-            map: mapInstance,
-            position,
-            title: 'You are here',
-          });
-        } catch (error) {
-          console.error('Error loading AdvancedMarkerElement:', error);
-        }
-      };
+    if (!position || !mapInstance) return;
 
-      loadMarker();
-    }
-  }, [position, mapInstance]);
+    const loadMarkers = async () => {
+      try {
+        const { AdvancedMarkerElement } = (await google.maps.importLibrary('marker')) as google.maps.MarkerLibrary;
+
+        markersRef.current.forEach((m) => m.map = null);
+        markersRef.current = [];
+
+        const focus = selectedPlace?.location ?? position;
+        mapInstance.setCenter(focus);
+
+        const userMarker = new AdvancedMarkerElement({
+          map: mapInstance,
+          position,
+          title: 'You are here',
+        });
+        markersRef.current.push(userMarker);
+
+        if (selectedPlace) {
+          const selectionMarker = new AdvancedMarkerElement({
+            map: mapInstance,
+            position: selectedPlace.location,
+            title: selectedPlace.name,
+          });
+          markersRef.current.push(selectionMarker);
+        }
+      } catch (error) {
+        console.error('Error loading AdvancedMarkerElement:', error);
+      }
+    };
+
+    loadMarkers();
+  }, [position, mapInstance, selectedPlace]);
 
   return (
     <LoadScript googleMapsApiKey={apiKey} libraries={libraries} version="beta">
