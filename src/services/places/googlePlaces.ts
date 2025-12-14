@@ -2,11 +2,27 @@ import { PLACES_MAX_RESULTS, PLACES_RADIUS_METERS } from '../../config/dataSourc
 import { Coordinates } from '../../types/geo';
 import { Place, PlaceCategory } from '../../types/places';
 
-const categoryToType: Record<PlaceCategory, google.maps.places.PlaceType> = {
+const categoryToIncludedType: Record<PlaceCategory, string> = {
   restaurant: 'restaurant',
   cafe: 'cafe',
   bar: 'bar',
   park: 'park',
+};
+
+type PlacesSearchResponse = {
+  places?: Array<{
+    id?: string;
+    displayName?: { text?: string };
+    location?: { latitude?: number; longitude?: number };
+    types?: string[];
+    rating?: number;
+  }>;
+};
+
+const mapTypesToCategory = (types?: string[]): PlaceCategory => {
+  if (!types) return 'restaurant';
+  const match = types.find((t) => t === 'restaurant' || t === 'cafe' || t === 'bar' || t === 'park');
+  return (match as PlaceCategory) ?? 'restaurant';
 };
 
 const estimateTravel = (distanceMeters: number) => {
@@ -30,19 +46,17 @@ const haversineDistance = (a: Coordinates, b: Coordinates) => {
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 };
 
-const mapResultToPlace = (result: google.maps.places.PlaceResult, origin: Coordinates): Place | null => {
-  const location = result.geometry?.location;
-  if (!location) return null;
+const mapResultToPlace = (result: NonNullable<PlacesSearchResponse['places']>[number], origin: Coordinates): Place | null => {
+  const lat = result.location?.latitude;
+  const lng = result.location?.longitude;
+  if (lat == null || lng == null) return null;
 
-  const lat = location.lat();
-  const lng = location.lng();
-  const category = (result.types?.find((t) => t === 'restaurant' || t === 'cafe' || t === 'bar' || t === 'park') as PlaceCategory) ?? 'restaurant';
-
+  const category = mapTypesToCategory(result.types);
   const distanceMeters = haversineDistance(origin, { lat, lng });
 
   return {
-    id: result.place_id ?? `${lat},${lng}`,
-    name: result.name ?? 'Unknown place',
+    id: result.id ?? `${lat},${lng}`,
+    name: result.displayName?.text ?? 'Unknown place',
     category,
     location: { lat, lng },
     rating: result.rating,
@@ -53,37 +67,51 @@ const mapResultToPlace = (result: google.maps.places.PlaceResult, origin: Coordi
 
 export type NearbyParams = {
   origin: Coordinates;
+  apiKey: string;
   category?: PlaceCategory;
   radiusMeters?: number;
   maxResults?: number;
 };
 
-export const fetchGoogleNearby = async ({ origin, category, radiusMeters, maxResults }: NearbyParams): Promise<Place[]> => {
-  if (!google.maps.places?.PlacesService) {
-    throw new Error('PlacesService not available');
-  }
-
-  const service = new google.maps.places.PlacesService(document.createElement('div'));
-
-  const request: google.maps.places.PlaceSearchRequest = {
-    location: origin,
-    rankBy: google.maps.places.RankBy.PROMINENCE,
-    radius: radiusMeters ?? PLACES_RADIUS_METERS,
-    type: category ? categoryToType[category] : undefined,
+export const fetchGoogleNearby = async ({
+  origin,
+  apiKey,
+  category,
+  radiusMeters,
+  maxResults,
+}: NearbyParams): Promise<Place[]> => {
+  const body = {
+    includedTypes: category ? [categoryToIncludedType[category]] : undefined,
+    maxResultCount: Math.min(maxResults ?? PLACES_MAX_RESULTS, PLACES_MAX_RESULTS),
+    rankPreference: 'POPULARITY',
+    locationRestriction: {
+      circle: {
+        center: { latitude: origin.lat, longitude: origin.lng },
+        radius: radiusMeters ?? PLACES_RADIUS_METERS,
+      },
+    },
   };
 
-  return new Promise((resolve, reject) => {
-    service.nearbySearch(request, (results, status) => {
-      if (status !== google.maps.places.PlacesServiceStatus.OK || !results) {
-        reject(new Error(`Places nearby search failed: ${status}`));
-        return;
-      }
-
-      const capped = results.slice(0, maxResults ?? PLACES_MAX_RESULTS);
-      const mapped = capped
-        .map((r) => mapResultToPlace(r, origin))
-        .filter((p): p is Place => Boolean(p));
-      resolve(mapped);
-    });
+  const response = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': apiKey,
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.types,places.location,places.rating',
+    },
+    body: JSON.stringify(body),
   });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(`Places API error ${response.status}: ${message || response.statusText}`);
+  }
+
+  const data: PlacesSearchResponse = await response.json();
+  const candidates = data.places ?? [];
+  const capped = candidates.slice(0, maxResults ?? PLACES_MAX_RESULTS);
+
+  return capped
+    .map((result) => mapResultToPlace(result, origin))
+    .filter((place): place is Place => Boolean(place));
 };

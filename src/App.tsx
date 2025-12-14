@@ -27,20 +27,25 @@ const App: React.FC = () => {
   const [placesError, setPlacesError] = useState<string | null>(null);
 
   const config = useMemo(() => {
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+    const mapApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
     const mapId = import.meta.env.VITE_GOOGLE_MAP_ID as string | undefined;
+    const placesApiKey =
+      (import.meta.env.VITE_GOOGLE_PLACES_API_KEY as string | undefined) ??
+      (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined);
 
     return {
-      apiKey,
+      mapApiKey,
       mapId,
-      isConfigured: Boolean(apiKey && mapId),
+      placesApiKey,
+      isMapConfigured: Boolean(mapApiKey && mapId),
+      isPlacesConfigured: Boolean(placesApiKey),
     };
   }, []);
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: config.apiKey ?? '',
-    libraries: ['places', 'marker'],
+    googleMapsApiKey: config.mapApiKey ?? '',
+    libraries: ['marker'],
   });
 
   useEffect(() => {
@@ -69,7 +74,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!position) return;
 
-    const shouldUseLive = Boolean(filters.liveMode && config.isConfigured && isLoaded && !loadError);
+    const shouldUseLive = Boolean(filters.liveMode && config.isPlacesConfigured);
     const categoryMap = {
       restaurants: 'restaurant',
       cafes: 'cafe',
@@ -81,11 +86,12 @@ const App: React.FC = () => {
       setLoadingPlaces(true);
       setPlacesError(null);
       try {
-        if (shouldUseLive) {
+        if (shouldUseLive && config.placesApiKey) {
           try {
             const liveResults = await fetchGoogleNearby({
               origin: position,
               category: categoryMap[filters.placeType],
+              apiKey: config.placesApiKey,
             });
             setPlaces(liveResults);
             setPlacesSource('live');
@@ -95,6 +101,8 @@ const App: React.FC = () => {
             console.warn('Live places failed, falling back to mock', error);
             setPlacesError('Live data unavailable, showing mock results.');
           }
+        } else if (filters.liveMode && !config.isPlacesConfigured) {
+          setPlacesError('Places API key missing; showing mock results.');
         }
 
         const mockResults = await fetchMockPlaces({
@@ -114,7 +122,7 @@ const App: React.FC = () => {
     };
 
     loadPlaces();
-  }, [filters.liveMode, filters.placeType, position, config.isConfigured, isLoaded, loadError]);
+  }, [filters.liveMode, filters.placeType, position, config.isPlacesConfigured, config.placesApiKey]);
 
   const scoredPlaces = useMemo(() => {
     const filtered = places.filter((place) => place.travel.walkMinutes <= filters.maxWalkMinutes + 10);
@@ -129,7 +137,7 @@ const App: React.FC = () => {
   );
 
   const renderMapState = () => {
-    if (!config.isConfigured) {
+    if (!config.isMapConfigured) {
       return (
         <div className="state-card error">
           <h3>Map not configured</h3>
@@ -312,7 +320,9 @@ const App: React.FC = () => {
             </div>
             <div>
               <p className="label">Config</p>
-              <p className="value">{config.isConfigured ? 'Map keys loaded' : 'Missing map keys'}</p>
+              <p className="value">
+                Map: {config.isMapConfigured ? 'ready' : 'missing'} · Places: {config.isPlacesConfigured ? 'ready' : 'missing'}
+              </p>
             </div>
           </div>
 
