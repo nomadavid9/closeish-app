@@ -27,8 +27,11 @@ Create `.env.local` with:
 ```bash
 VITE_GOOGLE_MAPS_API_KEY=your_maps_key
 VITE_GOOGLE_MAP_ID=your_map_id
+
 # Optional; falls back to VITE_GOOGLE_MAPS_API_KEY if omitted
 VITE_GOOGLE_PLACES_API_KEY=your_places_key
+# Optional; enables transit-step enrichment for top candidates
+VITE_GOOGLE_ROUTES_API_KEY=your_routes_key
 ```
 
 ### Run
@@ -80,11 +83,14 @@ This is the current retrieval + ranking baseline and will evolve.
 - Map provider fields into internal `Place` objects.
 - Estimate walk/transit/drive times from distance heuristics.
 
-4. Rank for "close-ish"
-- Apply local scoring logic to prioritize places that balance walkability and transit usefulness.
+4. Enrich top candidates (optional)
+- If Routes API is configured, enrich top candidates with transit step details (walk/access/egress/transfers/wait).
+
+5. Rank for "close-ish"
+- Apply local scoring logic that prefers low-friction transit paths when enriched data is available.
 - Keep only top-K candidates for display.
 
-5. Fail safely
+6. Fail safely
 - If live fetch fails or a Places key is missing, fall back to mock data so the app remains usable.
 
 For version history of retrieval behavior, see `docs/PLACES_ALGORITHM_CHANGELOG.md`.
@@ -104,6 +110,8 @@ For version history of retrieval behavior, see `docs/PLACES_ALGORITHM_CHANGELOG.
 - Release notes: `docs/RELEASE_NOTES.md`
 - Contribution workflow: `docs/CONTRIBUTING.md`
 - Places algorithm changelog: `docs/PLACES_ALGORITHM_CHANGELOG.md`
+- Algorithm research log: `docs/ALGORITHM_RESEARCH_LOG.md`
+- Transit corridor plan (Option C): `docs/TRANSIT_CORRIDOR_ALGORITHM_PLAN.md`
 
 ## Status
 

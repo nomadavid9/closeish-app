@@ -35,10 +35,10 @@ This story delivers a detailed plan and implementation blueprint only.
 
 ## 4) Current vs Target Retrieval
 
-Current (`v1`):
+Current (`v1.1` bridge):
 - Pull nearby places around user coordinate.
-- Rank with local heuristic scoring.
-- Transit accessibility is inferred indirectly.
+- Optionally enrich top-N candidates with Routes API transit step details.
+- Rank with transit-path-aware local scoring when enrichment data exists.
 
 Target (`v2`):
 - Find nearby access stops.
@@ -156,9 +156,14 @@ Current flow in `src/App.tsx` can stay mostly intact:
 
 Planned code-level evolution:
 - Add a new retrieval service, e.g. `src/services/places/transitCorridorPlaces.ts` (client to backend endpoint).
-- Extend `Place`/related types in `src/types/places.ts` with transit-path metadata.
-- Update `scorePlace` in `src/services/scoring/closishScore.ts` to consume transit corridor fields.
+- Reuse `Place.transitPath` metadata shape introduced in the Option A bridge.
+- Evolve `scorePlace` to prioritize corridor graph outputs over Routes top-N enrichment.
 - Keep `MapView` API stable initially; optionally add path overlays later.
+
+Compatibility guardrails from Option A to Option C:
+- Keep `transitPath` fields generic (`access/transfer/egress walk`, `wait`, `transfers`, `in-vehicle`, `total`) so corridor outputs can populate the same schema.
+- Keep retrieval orchestration in `src/App.tsx` provider-agnostic (replace enrichment source, not UI state flow).
+- Keep fallback behavior intact while swapping from top-N route enrichment to corridor-derived candidate generation.
 
 ## 8) Phase Plan (Execution Roadmap)
 

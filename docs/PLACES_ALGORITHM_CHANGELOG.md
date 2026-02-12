@@ -40,9 +40,56 @@ Status: current | archived | experiment
 - ...
 ```
 
-## v1 - Google Places API Nearby Search (Current)
+## v1.1 - Places Nearby + Routes Transit Enrichment (Current)
 Date: 2026-02-12
 Status: current
+
+### What Changed
+- Kept Places API `searchNearby` as primary candidate pull.
+- Added optional Routes API enrichment for top live candidates (`TRANSIT_ENRICH_TOP_N`) before final ranking.
+- Added transit path metadata support (access/transfer/egress walk, wait, transfers, in-vehicle, total transit).
+- Updated scoring to use enriched transit friction signals when present, while preserving v1 fallback behavior.
+
+### Retrieval Strategy
+- Provider/API:
+- Places API v1 (`searchNearby`) for initial candidate generation.
+- Routes API v2 (`computeRoutes`, transit mode) for top-candidate enrichment.
+- Endpoint:
+- `POST https://places.googleapis.com/v1/places:searchNearby`
+- `POST https://routes.googleapis.com/directions/v2:computeRoutes`
+- Request shape:
+- Places request unchanged from v1.
+- Routes requests run for a capped top-N candidate subset and request step-level duration/travel mode fields.
+- Ranking source:
+- Places popularity order for initial pool.
+- Local score reranking with transit-path penalties/bonuses when enrichment succeeds.
+- Limits:
+- initial candidate cap (`PLACES_MAX_RESULTS`, currently 20)
+- enrichment cap (`TRANSIT_ENRICH_TOP_N`, currently 6)
+- display cap (`PLACES_TOP_K`, currently 8)
+
+### Inputs
+- User geolocation (`lat/lng`).
+- Selected place category from filters.
+- Env key `VITE_GOOGLE_PLACES_API_KEY` (fallback to `VITE_GOOGLE_MAPS_API_KEY`).
+- Optional env key `VITE_GOOGLE_ROUTES_API_KEY` (fallback to `VITE_GOOGLE_MAPS_API_KEY`).
+
+### Fallbacks
+- If Routes key is missing or enrichment fails, keep baseline scoring path without breaking live retrieval.
+- If Places live fetch fails/non-OK, show warning and use mock dataset.
+
+### Known Gaps
+- Still destination-first (not yet corridor traversal from station graph).
+- Enrichment runs per candidate and is not yet batched.
+- No GTFS graph model or station-level expansion yet (planned in Option C).
+
+### Results / Notes
+- Provides an incremental bridge toward corridor-first ranking without replacing existing retrieval architecture.
+- Keeps compatibility with Option C by introducing transit-path fields reusable by future corridor graph outputs.
+
+## v1 - Google Places API Nearby Search
+Date: 2026-02-12
+Status: archived
 
 ### What Changed
 - Migrated retrieval from legacy Maps JavaScript `PlacesService.nearbySearch` to Places API v1 HTTP `searchNearby`.
