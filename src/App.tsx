@@ -12,8 +12,9 @@ import {
 import { Place } from './types/places';
 import { fetchMockPlaces } from './services/places/mockPlaces';
 import { fetchGoogleNearby } from './services/places/googlePlaces';
+import { enrichPlacesWithTransit } from './services/transit/googleRoutes';
 import { scorePlace } from './services/scoring/closishScore';
-import { PLACES_TOP_K } from './config/dataSources';
+import { PLACES_TOP_K, TRANSIT_ENRICH_TOP_N } from './config/dataSources';
 import './App.css';
 
 const MAP_LIBRARIES: Libraries = ['marker'];
@@ -34,13 +35,18 @@ const App: React.FC = () => {
     const placesApiKey =
       (import.meta.env.VITE_GOOGLE_PLACES_API_KEY as string | undefined) ??
       (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined);
+    const routesApiKey =
+      (import.meta.env.VITE_GOOGLE_ROUTES_API_KEY as string | undefined) ??
+      (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined);
 
     return {
       mapApiKey,
       mapId,
       placesApiKey,
+      routesApiKey,
       isMapConfigured: Boolean(mapApiKey && mapId),
       isPlacesConfigured: Boolean(placesApiKey),
+      isRoutesConfigured: Boolean(routesApiKey),
     };
   }, []);
 
@@ -95,9 +101,33 @@ const App: React.FC = () => {
               category: categoryMap[filters.placeType],
               apiKey: config.placesApiKey,
             });
-            setPlaces(liveResults);
+
+            let placesForRanking = liveResults;
+            if (config.routesApiKey) {
+              try {
+                const enrichmentSeed = [...liveResults].sort((a, b) => {
+                  const ratingDelta = (b.rating ?? 0) - (a.rating ?? 0);
+                  if (ratingDelta !== 0) return ratingDelta;
+                  return a.travel.transitMinutes - b.travel.transitMinutes;
+                });
+
+                const enrichedPlaces = await enrichPlacesWithTransit({
+                  origin: position,
+                  places: enrichmentSeed,
+                  apiKey: config.routesApiKey,
+                  maxPlaces: TRANSIT_ENRICH_TOP_N,
+                });
+
+                const enrichedById = new Map(enrichedPlaces.filter((place) => place.transitPath).map((place) => [place.id, place]));
+                placesForRanking = liveResults.map((place) => enrichedById.get(place.id) ?? place);
+              } catch (error) {
+                console.warn('Transit enrichment failed; using baseline scoring', error);
+              }
+            }
+
+            setPlaces(placesForRanking);
             setPlacesSource('live');
-            setSelectedPlaceId((prev) => prev && liveResults.find((p) => p.id === prev) ? prev : null);
+            setSelectedPlaceId((prev) => prev && placesForRanking.find((p) => p.id === prev) ? prev : null);
             return;
           } catch (error) {
             console.warn('Live places failed, falling back to mock', error);
@@ -124,7 +154,7 @@ const App: React.FC = () => {
     };
 
     loadPlaces();
-  }, [filters.liveMode, filters.placeType, position, config.isPlacesConfigured, config.placesApiKey]);
+  }, [filters.liveMode, filters.placeType, position, config.isPlacesConfigured, config.placesApiKey, config.routesApiKey]);
 
   const scoredPlaces = useMemo(() => {
     const filtered = places.filter((place) => place.travel.walkMinutes <= filters.maxWalkMinutes + 10);
@@ -323,7 +353,8 @@ const App: React.FC = () => {
             <div>
               <p className="label">Config</p>
               <p className="value">
-                Map: {config.isMapConfigured ? 'ready' : 'missing'} · Places: {config.isPlacesConfigured ? 'ready' : 'missing'}
+                Map: {config.isMapConfigured ? 'ready' : 'missing'} · Places: {config.isPlacesConfigured ? 'ready' : 'missing'} ·
+                Routes: {config.isRoutesConfigured ? 'ready' : 'optional'}
               </p>
             </div>
           </div>
@@ -350,22 +381,34 @@ const App: React.FC = () => {
               </div>
             ) : (
               <ul className="place-list">
-                {scoredPlaces.map(({ place, score }) => (
-                  <li
-                    key={place.id}
-                    className={`place-item ${selectedPlaceId === place.id ? 'selected' : ''}`}
-                    onClick={() => setSelectedPlaceId(place.id)}
-                  >
-                    <div className="place-main">
-                      <p className="value">{place.name}</p>
-                      <p className="note">{place.category} · score {score.closishScore.toFixed(0)}</p>
-                    </div>
-                    <div className="place-meta">
-                      <span>{place.travel.transitMinutes}m transit</span>
-                      <span>{place.travel.walkMinutes}m walk</span>
-                    </div>
-                  </li>
-                ))}
+                {scoredPlaces.map(({ place, score }) => {
+                  const transitMinutes = place.transitPath?.totalMinutes ?? place.travel.transitMinutes;
+                  const walkMinutes = place.transitPath
+                    ? (place.transitPath.accessWalkMinutes ?? 0) +
+                      (place.transitPath.transferWalkMinutes ?? 0) +
+                      (place.transitPath.egressWalkMinutes ?? 0)
+                    : place.travel.walkMinutes;
+
+                  return (
+                    <li
+                      key={place.id}
+                      className={`place-item ${selectedPlaceId === place.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedPlaceId(place.id)}
+                    >
+                      <div className="place-main">
+                        <p className="value">{place.name}</p>
+                        <p className="note">{place.category} · score {score.closishScore.toFixed(0)}</p>
+                      </div>
+                      <div className="place-meta">
+                        <span>{transitMinutes}m transit</span>
+                        <span>{walkMinutes}m walk</span>
+                        {place.transitPath ? (
+                          <span>{place.transitPath.transferCount ?? 0} transfer{(place.transitPath.transferCount ?? 0) === 1 ? '' : 's'}</span>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
