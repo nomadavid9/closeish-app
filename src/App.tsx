@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useJsApiLoader } from '@react-google-maps/api';
+import { useJsApiLoader, type Libraries } from '@react-google-maps/api';
 import MapView from './components/MapView';
 import { Coordinates } from './types/geo';
 import {
@@ -15,6 +15,8 @@ import { fetchGoogleNearby } from './services/places/googlePlaces';
 import { scorePlace } from './services/scoring/closishScore';
 import { PLACES_TOP_K } from './config/dataSources';
 import './App.css';
+
+const MAP_LIBRARIES: Libraries = ['marker'];
 
 const App: React.FC = () => {
   const [position, setPosition] = useState<Coordinates | null>(null);
@@ -45,7 +47,7 @@ const App: React.FC = () => {
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: config.mapApiKey ?? '',
-    libraries: ['marker'],
+    libraries: MAP_LIBRARIES,
   });
 
   useEffect(() => {
