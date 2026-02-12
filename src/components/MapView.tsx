@@ -48,7 +48,7 @@ const MapView: React.FC<MapViewProps> = ({ position, mapId, selectedPlace, isLoa
     };
 
     loadMarkers();
-  }, [position, mapInstance, selectedPlace]);
+  }, [position, mapInstance, selectedPlace, isLoaded]);
 
   if (!isLoaded) {
     return null;
