@@ -40,6 +40,11 @@ export type EnrichPlacesWithTransitParams = {
   departureTime?: string;
 };
 
+const toErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  return String(error);
+};
+
 const parseDurationSeconds = (value?: string): number | null => {
   if (!value) return null;
   const normalized = value.endsWith('s') ? value.slice(0, -1) : value;
@@ -112,6 +117,26 @@ const summarizeTransitRoute = (route: RoutesCandidate): TransitRouteSummary | nu
   };
 };
 
+const getRoutesApiErrorMessage = async (response: Response): Promise<string> => {
+  const fallback = response.statusText || 'Unknown Routes API error';
+
+  try {
+    const payload = (await response.json()) as {
+      error?: { message?: string; status?: string };
+    };
+    const details = payload.error?.message ?? fallback;
+    const status = payload.error?.status;
+    return status ? `${status}: ${details}` : details;
+  } catch {
+    try {
+      const text = await response.text();
+      return text || fallback;
+    } catch {
+      return fallback;
+    }
+  }
+};
+
 const fetchTransitSummary = async ({
   origin,
   destination,
@@ -128,7 +153,7 @@ const fetchTransitSummary = async ({
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': apiKey,
-      'X-Goog-FieldMask': 'routes.duration,routes.legs.steps.travelMode,routes.legs.steps.staticDuration,routes.legs.steps.duration',
+      'X-Goog-FieldMask': 'routes.duration,routes.legs.steps.travelMode,routes.legs.steps.staticDuration',
     },
     body: JSON.stringify({
       origin: {
@@ -154,7 +179,8 @@ const fetchTransitSummary = async ({
   });
 
   if (!response.ok) {
-    throw new Error(`Routes API error ${response.status}`);
+    const details = await getRoutesApiErrorMessage(response);
+    throw new Error(`Routes API error ${response.status}: ${details}`);
   }
 
   const data: ComputeRoutesResponse = await response.json();
@@ -175,6 +201,7 @@ export const enrichPlacesWithTransit = async ({
   if (limit === 0) return places;
 
   const targetPlaces = places.slice(0, limit);
+  const failures: Array<{ placeId: string; error: string }> = [];
 
   const summaries = await Promise.all(
     targetPlaces.map(async (place) => {
@@ -188,11 +215,19 @@ export const enrichPlacesWithTransit = async ({
 
         return { placeId: place.id, summary };
       } catch (error) {
-        console.warn(`Transit enrichment failed for ${place.id}`, error);
+        failures.push({ placeId: place.id, error: toErrorMessage(error) });
         return { placeId: place.id, summary: null };
       }
     })
   );
+
+  if (failures.length > 0) {
+    const sample = failures
+      .slice(0, 2)
+      .map((failure) => `${failure.placeId}: ${failure.error}`)
+      .join(' | ');
+    console.warn(`Transit enrichment failed for ${failures.length}/${targetPlaces.length} places. ${sample}`);
+  }
 
   const summaryById = new Map<string, TransitRouteSummary>();
   summaries.forEach(({ placeId, summary }) => {
