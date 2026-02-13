@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useJsApiLoader, type Libraries } from '@react-google-maps/api';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import MapView from './components/MapView';
+import PlaceAutocomplete from './components/PlaceAutocomplete';
 import { Coordinates } from './types/geo';
 import {
   FilterState,
@@ -15,19 +15,27 @@ import { fetchGoogleNearby } from './services/places/googlePlaces';
 import { enrichPlacesWithTransit } from './services/transit/googleRoutes';
 import { scorePlace } from './services/scoring/closishScore';
 import { PLACES_TOP_K, TRANSIT_ENRICH_TOP_N } from './config/dataSources';
+import { getGoogleMapsLoader } from './services/maps/googleMapsLoader';
 import './App.css';
 
-const MAP_LIBRARIES: Libraries = ['marker'];
+type OriginOverride = {
+  label: string;
+  coordinates: Coordinates;
+};
 
 const App: React.FC = () => {
   const [position, setPosition] = useState<Coordinates | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
+  const [originOverride, setOriginOverride] = useState<OriginOverride | null>(null);
+  const [originError, setOriginError] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>(filterDefaults);
   const [places, setPlaces] = useState<Place[]>([]);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [loadingPlaces, setLoadingPlaces] = useState<boolean>(false);
   const [placesSource, setPlacesSource] = useState<'mock' | 'live'>('mock');
   const [placesError, setPlacesError] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const config = useMemo(() => {
     const mapApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
@@ -50,11 +58,29 @@ const App: React.FC = () => {
     };
   }, []);
 
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: config.mapApiKey ?? '',
-    libraries: MAP_LIBRARIES,
-  });
+  useEffect(() => {
+    if (!config.mapApiKey) return;
+    let active = true;
+    const loader = getGoogleMapsLoader(config.mapApiKey);
+    if (!loader) return;
+
+    loader
+      .load()
+      .then(() => {
+        if (!active) return;
+        setIsLoaded(true);
+        setLoadError(null);
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setIsLoaded(false);
+        setLoadError(String(error));
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [config.mapApiKey]);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -79,8 +105,25 @@ const App: React.FC = () => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
+  const activeOrigin = useMemo(
+    () => originOverride?.coordinates ?? position ?? null,
+    [originOverride, position]
+  );
+
+  const clearOriginOverride = () => {
+    setOriginOverride(null);
+    setOriginError(null);
+    setSelectedPlaceId(null);
+  };
+
+  const handleOriginSelected = useCallback((selection: { label: string; coordinates: Coordinates }) => {
+    setOriginOverride(selection);
+    setOriginError(null);
+    setSelectedPlaceId(null);
+  }, []);
+
   useEffect(() => {
-    if (!position) return;
+    if (!activeOrigin) return;
 
     const shouldUseLive = Boolean(filters.liveMode && config.isPlacesConfigured);
     const categoryMap = {
@@ -97,7 +140,7 @@ const App: React.FC = () => {
         if (shouldUseLive && config.placesApiKey) {
           try {
             const liveResults = await fetchGoogleNearby({
-              origin: position,
+              origin: activeOrigin,
               category: categoryMap[filters.placeType],
               apiKey: config.placesApiKey,
             });
@@ -112,7 +155,7 @@ const App: React.FC = () => {
                 });
 
                 const enrichedPlaces = await enrichPlacesWithTransit({
-                  origin: position,
+                  origin: activeOrigin,
                   places: enrichmentSeed,
                   apiKey: config.routesApiKey,
                   maxPlaces: TRANSIT_ENRICH_TOP_N,
@@ -138,7 +181,7 @@ const App: React.FC = () => {
         }
 
         const mockResults = await fetchMockPlaces({
-          origin: position,
+          origin: activeOrigin,
           categoryFilter: categoryMap[filters.placeType],
         });
         setPlaces(mockResults);
@@ -154,7 +197,7 @@ const App: React.FC = () => {
     };
 
     loadPlaces();
-  }, [filters.liveMode, filters.placeType, position, config.isPlacesConfigured, config.placesApiKey, config.routesApiKey]);
+  }, [filters.liveMode, filters.placeType, activeOrigin, config.isPlacesConfigured, config.placesApiKey, config.routesApiKey]);
 
   const scoredPlaces = useMemo(() => {
     const filtered = places.filter((place) => place.travel.walkMinutes <= filters.maxWalkMinutes + 10);
@@ -184,7 +227,7 @@ const App: React.FC = () => {
       return (
         <div className="state-card error">
           <h3>Map load issue</h3>
-          <p>{String(loadError)}</p>
+          <p>{loadError}</p>
         </div>
       );
     }
@@ -198,7 +241,7 @@ const App: React.FC = () => {
       );
     }
 
-    if (geoError) {
+    if (geoError && !activeOrigin) {
       return (
         <div className="state-card error">
           <h3>Location issue</h3>
@@ -207,16 +250,25 @@ const App: React.FC = () => {
       );
     }
 
-    if (!position) {
+    if (!activeOrigin) {
       return (
         <div className="state-card">
-          <h3>Requesting your location…</h3>
-          <p>Allow location access to see the map centered on you.</p>
+          <h3>Set an origin</h3>
+          <p>Allow location access or search an origin to center the map.</p>
         </div>
       );
     }
 
-    return <MapView position={position} mapId={config.mapId!} selectedPlace={selectedPlace} isLoaded={isLoaded} />;
+    return (
+      <MapView
+        origin={activeOrigin}
+        currentLocation={position}
+        usingOriginOverride={Boolean(originOverride)}
+        mapId={config.mapId!}
+        selectedPlace={selectedPlace}
+        isLoaded={isLoaded}
+      />
+    );
   };
 
   const filterSummary = useMemo(() => {
@@ -258,6 +310,25 @@ const App: React.FC = () => {
           </div>
 
           <div className="control-group">
+            <div className="control">
+              <p className="label">Origin</p>
+              <PlaceAutocomplete
+                apiKey={config.mapApiKey ?? ''}
+                disabled={!isLoaded || Boolean(loadError) || !config.isMapConfigured}
+                onPlaceSelected={handleOriginSelected}
+                onError={setOriginError}
+              />
+              <div className="origin-actions">
+                <button type="button" className="chip" onClick={clearOriginOverride} disabled={!originOverride}>
+                  Use current location
+                </button>
+                <p className="note">
+                  {originOverride ? `Override: ${originOverride.label}` : 'Default: current geolocation'}
+                </p>
+              </div>
+              {originError ? <p className="note error">{originError}</p> : null}
+            </div>
+
             <div className="control">
               <p className="label">Place type</p>
               <select
@@ -335,14 +406,29 @@ const App: React.FC = () => {
 
           <div className="status-row">
             <div>
-              <p className="label">Your coordinates</p>
+              <p className="label">Active origin</p>
+              <p className="value">
+                {activeOrigin ? (
+                  <>
+                    {activeOrigin.lat.toFixed(5)}, {activeOrigin.lng.toFixed(5)}
+                  </>
+                ) : (
+                  'Waiting for location or override'
+                )}
+              </p>
+              <p className="note">
+                {originOverride ? 'Source: override' : activeOrigin ? 'Source: geolocation' : 'Source: pending'}
+              </p>
+            </div>
+            <div>
+              <p className="label">Device coordinates</p>
               <p className="value">
                 {position ? (
                   <>
                     {position.lat.toFixed(5)}, {position.lng.toFixed(5)}
                   </>
                 ) : (
-                  'Waiting for permission'
+                  'Unavailable'
                 )}
               </p>
             </div>

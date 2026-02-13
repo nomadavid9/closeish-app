@@ -112,6 +112,35 @@
   color: var(--ink);
 }
 
+.input:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.origin-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.origin-actions .note {
+  margin: 0;
+}
+
+.place-autocomplete-host {
+  width: 100%;
+}
+
+.place-autocomplete-host gmp-place-autocomplete {
+  width: 100%;
+}
+
+.place-autocomplete-host.disabled {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
 .chip-group {
   display: flex;
   gap: 8px;
@@ -132,6 +161,11 @@
   background: rgba(22, 61, 109, 0.1);
   border-color: rgba(22, 61, 109, 0.4);
   color: var(--navy);
+}
+
+.chip:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 .value {

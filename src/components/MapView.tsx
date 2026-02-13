@@ -4,18 +4,27 @@ import { Coordinates } from '../types/geo';
 import { Place } from '../types/places';
 
 export type MapViewProps = {
-  position: Coordinates;
+  origin: Coordinates;
+  currentLocation?: Coordinates | null;
+  usingOriginOverride?: boolean;
   mapId: string;
   selectedPlace?: Place | null;
   isLoaded: boolean;
 };
 
-const MapView: React.FC<MapViewProps> = ({ position, mapId, selectedPlace, isLoaded }) => {
+const MapView: React.FC<MapViewProps> = ({
+  origin,
+  currentLocation,
+  usingOriginOverride = false,
+  mapId,
+  selectedPlace,
+  isLoaded,
+}) => {
   const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
 
   useEffect(() => {
-    if (!position || !mapInstance || !isLoaded) return;
+    if (!mapInstance || !isLoaded) return;
 
     const loadMarkers = async () => {
       try {
@@ -24,15 +33,24 @@ const MapView: React.FC<MapViewProps> = ({ position, mapId, selectedPlace, isLoa
         markersRef.current.forEach((m) => m.map = null);
         markersRef.current = [];
 
-        const focus = selectedPlace?.location ?? position;
+        const focus = selectedPlace?.location ?? origin;
         mapInstance.setCenter(focus);
 
-        const userMarker = new AdvancedMarkerElement({
+        const originMarker = new AdvancedMarkerElement({
           map: mapInstance,
-          position,
-          title: 'You are here',
+          position: origin,
+          title: usingOriginOverride ? 'Selected origin' : 'Current location',
         });
-        markersRef.current.push(userMarker);
+        markersRef.current.push(originMarker);
+
+        if (usingOriginOverride && currentLocation) {
+          const currentLocationMarker = new AdvancedMarkerElement({
+            map: mapInstance,
+            position: currentLocation,
+            title: 'Device location',
+          });
+          markersRef.current.push(currentLocationMarker);
+        }
 
         if (selectedPlace) {
           const selectionMarker = new AdvancedMarkerElement({
@@ -48,7 +66,7 @@ const MapView: React.FC<MapViewProps> = ({ position, mapId, selectedPlace, isLoa
     };
 
     loadMarkers();
-  }, [position, mapInstance, selectedPlace, isLoaded]);
+  }, [origin, currentLocation, usingOriginOverride, mapInstance, selectedPlace, isLoaded]);
 
   if (!isLoaded) {
     return null;
@@ -57,7 +75,7 @@ const MapView: React.FC<MapViewProps> = ({ position, mapId, selectedPlace, isLoa
   return (
     <GoogleMap
       mapContainerClassName="map-container"
-      center={position}
+      center={origin}
       zoom={15}
       options={{ mapId }}
       onLoad={setMapInstance}
