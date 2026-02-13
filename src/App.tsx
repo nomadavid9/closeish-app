@@ -15,7 +15,7 @@ import { fetchGoogleNearby } from './services/places/googlePlaces';
 import { enrichPlacesWithTransit } from './services/transit/googleRoutes';
 import { scorePlace } from './services/scoring/closishScore';
 import { PLACES_TOP_K, TRANSIT_ENRICH_TOP_N } from './config/dataSources';
-import { getGoogleMapsLoader } from './services/maps/googleMapsLoader';
+import { loadGoogleMapsLibrary } from './services/maps/googleMapsLoader';
 import './App.css';
 
 type OriginOverride = {
@@ -61,11 +61,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!config.mapApiKey) return;
     let active = true;
-    const loader = getGoogleMapsLoader(config.mapApiKey);
-    if (!loader) return;
-
-    loader
-      .load()
+    loadGoogleMapsLibrary(config.mapApiKey, 'maps')
       .then(() => {
         if (!active) return;
         setIsLoaded(true);

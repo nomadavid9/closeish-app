@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { getGoogleMapsLoader } from '../services/maps/googleMapsLoader';
+import { loadGoogleMapsLibrary } from '../services/maps/googleMapsLoader';
 import { Coordinates } from '../types/geo';
 
 type PlaceAutocompleteProps = {
@@ -35,8 +35,7 @@ const PlaceAutocomplete: React.FC<PlaceAutocompleteProps> = ({
     const host = hostRef.current;
     if (!host) return;
 
-    const loader = getGoogleMapsLoader(apiKey);
-    if (!loader) {
+    if (!apiKey) {
       onError?.('Origin search unavailable: missing Maps API key.');
       return;
     }
@@ -47,8 +46,7 @@ const PlaceAutocomplete: React.FC<PlaceAutocompleteProps> = ({
 
     const initialize = async () => {
       try {
-        await loader.load();
-        await google.maps.importLibrary('places');
+        await loadGoogleMapsLibrary(apiKey, 'places');
         if (!active) return;
 
         element = document.createElement('gmp-place-autocomplete');

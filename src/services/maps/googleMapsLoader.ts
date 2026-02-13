@@ -1,17 +1,31 @@
-import { Loader, type Library } from '@googlemaps/js-api-loader';
+import { importLibrary, setOptions } from '@googlemaps/js-api-loader';
 
-const MAP_LIBRARIES: Library[] = ['marker', 'places'];
+let configuredApiKey: string | null = null;
+let configured = false;
 
-let loaderInstance: Loader | null = null;
-
-export const getGoogleMapsLoader = (apiKey: string) => {
-  if (!apiKey) return null;
-  if (!loaderInstance) {
-    loaderInstance = new Loader({
-      apiKey,
-      version: 'weekly',
-      libraries: MAP_LIBRARIES,
+const ensureConfigured = (apiKey: string) => {
+  if (!apiKey) return false;
+  if (!configured) {
+    setOptions({
+      key: apiKey,
+      v: 'weekly',
+      libraries: ['marker', 'places'],
     });
+    configuredApiKey = apiKey;
+    configured = true;
+    return true;
   }
-  return loaderInstance;
+
+  if (configuredApiKey !== apiKey) {
+    console.warn('Google Maps loader already configured with a different API key; continuing with initial key.');
+  }
+
+  return true;
+};
+
+export const loadGoogleMapsLibrary = async (apiKey: string, library: 'maps' | 'marker' | 'places') => {
+  if (!ensureConfigured(apiKey)) {
+    throw new Error('Missing Maps API key.');
+  }
+  return importLibrary(library);
 };
