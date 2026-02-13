@@ -133,7 +133,61 @@
 }
 
 .place-autocomplete-host gmp-place-autocomplete {
+  display: block;
   width: 100%;
+  color-scheme: light;
+  font-family: inherit;
+}
+
+.place-autocomplete-host gmp-place-autocomplete::part(container) {
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.02);
+  box-shadow: none;
+}
+
+.place-autocomplete-host gmp-place-autocomplete::part(input) {
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.place-autocomplete-host gmp-place-autocomplete::part(input):focus-visible {
+  outline: 2px solid rgba(22, 61, 109, 0.35);
+  outline-offset: 1px;
+}
+
+.place-autocomplete-host gmp-place-autocomplete::part(prediction-list) {
+  margin-top: 6px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.place-autocomplete-host gmp-place-autocomplete::part(prediction-item) {
+  padding: 10px 12px;
+}
+
+.place-autocomplete-host gmp-place-autocomplete::part(prediction-item-main-text) {
+  color: var(--ink);
+}
+
+.place-autocomplete-host gmp-place-autocomplete::part(prediction-item-match) {
+  color: var(--navy);
+  font-weight: 700;
+}
+
+.place-autocomplete-host gmp-place-autocomplete::part(prediction-item-selected) {
+  background: rgba(22, 61, 109, 0.08);
+}
+
+.place-autocomplete-host gmp-place-autocomplete::part(prediction-item-icon) {
+  color: rgba(22, 61, 109, 0.8);
+}
+
+.place-autocomplete-host gmp-place-autocomplete::part(separator) {
+  border-color: rgba(15, 23, 42, 0.08);
 }
 
 .place-autocomplete-host.disabled {
