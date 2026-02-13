@@ -145,7 +145,8 @@ const MapView: React.FC<MapViewProps> = ({
             background: '#34A853',
             borderColor: '#188038',
             glyphColor: '#ffffff',
-            glyph: '',
+            glyph: '●',
+            scale: 1.05,
           });
           const selectionMarker = new AdvancedMarkerElement({
             map: mapInstance,
