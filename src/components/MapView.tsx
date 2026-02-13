@@ -5,6 +5,12 @@ import { Place } from '../types/places';
 
 const DEFAULT_ORIGIN_ZOOM = 15;
 const CAMERA_PADDING_PX = 72;
+const DEFAULT_UI_PADDING = {
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+} as const;
 
 const clampLatitude = (lat: number) => Math.max(-85, Math.min(85, lat));
 
@@ -18,10 +24,21 @@ const buildMirroredPoint = (origin: Coordinates, destination: Coordinates): Coor
   lng: normalizeLongitude(origin.lng + (origin.lng - destination.lng)),
 });
 
+type ViewPadding = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
+type MapCameraMode = 'origin_locked' | 'follow_selection';
+
 export type MapViewProps = {
   origin: Coordinates;
   currentLocation?: Coordinates | null;
   usingOriginOverride?: boolean;
+  cameraMode?: MapCameraMode;
+  uiPadding?: ViewPadding;
   mapId: string;
   selectedPlace?: Place | null;
   isLoaded: boolean;
@@ -31,6 +48,8 @@ const MapView: React.FC<MapViewProps> = ({
   origin,
   currentLocation,
   usingOriginOverride = false,
+  cameraMode = 'origin_locked',
+  uiPadding = DEFAULT_UI_PADDING,
   mapId,
   selectedPlace,
   isLoaded,
@@ -42,8 +61,15 @@ const MapView: React.FC<MapViewProps> = ({
     if (!mapInstance || !isLoaded) return;
 
     if (!selectedPlace) {
-      mapInstance.setCenter(origin);
-      mapInstance.setZoom(DEFAULT_ORIGIN_ZOOM);
+      mapInstance.moveCamera({
+        center: origin,
+        zoom: DEFAULT_ORIGIN_ZOOM,
+      });
+      return;
+    }
+
+    if (cameraMode === 'follow_selection') {
+      mapInstance.panTo(selectedPlace.location);
       return;
     }
 
@@ -54,23 +80,39 @@ const MapView: React.FC<MapViewProps> = ({
     bounds.extend(mirroredPoint);
 
     mapInstance.fitBounds(bounds, {
-      top: CAMERA_PADDING_PX,
-      right: CAMERA_PADDING_PX,
-      bottom: CAMERA_PADDING_PX,
-      left: CAMERA_PADDING_PX,
+      top: uiPadding.top + CAMERA_PADDING_PX,
+      right: uiPadding.right + CAMERA_PADDING_PX,
+      bottom: uiPadding.bottom + CAMERA_PADDING_PX,
+      left: uiPadding.left + CAMERA_PADDING_PX,
     });
 
+    const destinationLatLng = new google.maps.LatLng(destination.lat, destination.lng);
+    const ensureDestinationVisible = () => {
+      const currentBounds = mapInstance.getBounds();
+      if (currentBounds?.contains(destinationLatLng)) return;
+
+      const zoom = mapInstance.getZoom();
+      if (zoom == null || zoom <= 2) return;
+
+      mapInstance.moveCamera({
+        center: origin,
+        zoom: zoom - 1,
+      });
+      google.maps.event.addListenerOnce(mapInstance, 'idle', ensureDestinationVisible);
+    };
+
     google.maps.event.addListenerOnce(mapInstance, 'idle', () => {
-      mapInstance.setCenter(origin);
+      mapInstance.moveCamera({ center: origin });
+      google.maps.event.addListenerOnce(mapInstance, 'idle', ensureDestinationVisible);
     });
-  }, [mapInstance, isLoaded, origin, selectedPlace]);
+  }, [mapInstance, isLoaded, origin, selectedPlace, cameraMode, uiPadding]);
 
   useEffect(() => {
     if (!mapInstance || !isLoaded) return;
 
     const loadMarkers = async () => {
       try {
-        const { AdvancedMarkerElement } = (await google.maps.importLibrary('marker')) as google.maps.MarkerLibrary;
+        const { AdvancedMarkerElement, PinElement } = (await google.maps.importLibrary('marker')) as google.maps.MarkerLibrary;
 
         markersRef.current.forEach((m) => m.map = null);
         markersRef.current = [];
@@ -83,19 +125,33 @@ const MapView: React.FC<MapViewProps> = ({
         markersRef.current.push(originMarker);
 
         if (usingOriginOverride && currentLocation) {
+          const devicePin = new PinElement({
+            background: '#64748b',
+            borderColor: '#475569',
+            glyphColor: '#ffffff',
+            glyph: 'D',
+          });
           const currentLocationMarker = new AdvancedMarkerElement({
             map: mapInstance,
             position: currentLocation,
             title: 'Device location',
+            content: devicePin.element,
           });
           markersRef.current.push(currentLocationMarker);
         }
 
         if (selectedPlace) {
+          const placePin = new PinElement({
+            background: '#34A853',
+            borderColor: '#188038',
+            glyphColor: '#ffffff',
+            glyph: '',
+          });
           const selectionMarker = new AdvancedMarkerElement({
             map: mapInstance,
             position: selectedPlace.location,
             title: selectedPlace.name,
+            content: placePin.element,
           });
           markersRef.current.push(selectionMarker);
         }

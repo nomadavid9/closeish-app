@@ -355,6 +355,16 @@
   height: 100%;
 }
 
+.map-shell .gm-style-mtc {
+  margin-top: 10px;
+  margin-left: 10px;
+}
+
+.map-shell .gm-fullscreen-control {
+  margin-top: 10px;
+  margin-right: 10px;
+}
+
 .state-card {
   height: 100%;
   display: flex;
