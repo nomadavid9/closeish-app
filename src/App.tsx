@@ -242,6 +242,11 @@ const App: React.FC = () => {
     [places, selectedPlaceId]
   );
 
+  const selectedTripMinutes = useMemo(() => {
+    if (!selectedPlace) return null;
+    return selectedPlace.transitPath?.totalMinutes ?? selectedPlace.travel.transitMinutes + selectedPlace.travel.walkMinutes;
+  }, [selectedPlace]);
+
   const renderMapState = () => {
     if (!config.isMapConfigured) {
       return (
@@ -369,23 +374,21 @@ const App: React.FC = () => {
       </header>
 
       <main className="app-body">
-        <section className="panel">
-          <div className="panel-header">
-            <div>
-              <p className="eyebrow">Filters</p>
-              <h2>Tell us your vibe</h2>
-              <p className="muted">Phase 4: live data when available, with mock fallback to stay fast.</p>
-            </div>
+        <section className="panel intent-panel">
+          <div className="panel-header panel-header-centered">
+            <p className="eyebrow">Filters</p>
+            <h2>Tell us your vibe</h2>
+            <p className="muted">Phase 4: live data when available, with mock fallback to stay fast.</p>
             <button
               type="button"
-              className={`pill ${filters.liveMode ? 'live' : 'plan'}`}
+              className={`pill ${filters.liveMode ? 'live' : 'plan'} panel-mode-toggle`}
               onClick={() => setFilter('liveMode', !filters.liveMode)}
             >
               {filters.liveMode ? 'Live mode' : 'Plan mode'}
             </button>
           </div>
 
-          <div className="control-group">
+          <div className="control-group control-group-origin">
             <div className="control">
               <p className="label">Origin</p>
               <PlaceAutocomplete
@@ -410,7 +413,9 @@ const App: React.FC = () => {
               {originError ? <p className="note error">{originError}</p> : null}
               {geoError ? <p className="note error">{geoError}</p> : null}
             </div>
+          </div>
 
+          <div className="control-group control-group-preferences">
             <div className="control">
               <p className="label">Place type</p>
               <select
@@ -485,7 +490,10 @@ const App: React.FC = () => {
               <p className="note">Currently: {filters.maxWalkMinutes} min</p>
             </div>
           </div>
+        </section>
 
+        <details className="status-disclosure">
+          <summary>Selection and trip summary</summary>
           <div className="status-row">
             <div>
               <p className="label">Active origin</p>
@@ -525,53 +533,58 @@ const App: React.FC = () => {
                 Routes: {config.isRoutesConfigured ? 'ready' : 'optional'}
               </p>
             </div>
-          </div>
-
-          <div className="list-panel">
-            <div className="list-header">
-              <div className="list-title">
-                <h3>Nearby ({placesSource === 'live' ? 'live' : 'mock'})</h3>
-                <span className={`badge ${placesSource === 'live' ? 'badge-live' : 'badge-mock'}`}>
-                  {placesSource === 'live' ? 'Live data' : 'Mock data'}
-                </span>
-              </div>
-              {loadingPlaces ? (
-                <p className="note">Loading…</p>
-              ) : placesError ? (
-                <p className="note error">{placesError}</p>
-              ) : (
-                <p className="note">Ranked locally; top candidates only.</p>
-              )}
+            <div>
+              <p className="label">Selected place</p>
+              <p className="value">{selectedPlace ? selectedPlace.name : 'None selected yet'}</p>
+              <p className="note">{selectedPlace ? `${selectedTripMinutes ?? 'N/A'} min total trip` : 'Tap any card to inspect a trip.'}</p>
             </div>
-            {scoredPlaces.length === 0 && !loadingPlaces ? (
-              <div className="empty">
-                <p>No places found for these filters yet.</p>
-              </div>
-            ) : (
-              <ul className="place-grid" aria-label="Ranked places">
-                {scoredPlaces.map(({ place, score }) => {
-                  return (
-                    <li key={place.id} className="place-grid-item">
-                      <PlaceCard
-                        place={place}
-                        closishScore={score.closishScore}
-                        selected={selectedPlaceId === place.id}
-                        expanded={expandedPlaceId === place.id}
-                        onToggleExpand={handlePlaceCardToggle}
-                        showInlineMap={expandedPlaceId === place.id && selectedPlaceId === place.id}
-                        origin={activeOrigin}
-                        mapId={config.mapId}
-                        mapReady={Boolean(isLoaded && config.isMapConfigured && !loadError)}
-                      />
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
           </div>
-        </section>
+        </details>
 
         <section className="map-shell">{renderMapState()}</section>
+
+        <section className="list-panel">
+          <div className="list-header">
+            <div className="list-title">
+              <h3>Nearby ({placesSource === 'live' ? 'live' : 'mock'})</h3>
+              <span className={`badge ${placesSource === 'live' ? 'badge-live' : 'badge-mock'}`}>
+                {placesSource === 'live' ? 'Live data' : 'Mock data'}
+              </span>
+            </div>
+            {loadingPlaces ? (
+              <p className="note">Loading…</p>
+            ) : placesError ? (
+              <p className="note error">{placesError}</p>
+            ) : (
+              <p className="note">Ranked locally; top candidates only.</p>
+            )}
+          </div>
+          {scoredPlaces.length === 0 && !loadingPlaces ? (
+            <div className="empty">
+              <p>No places found for these filters yet.</p>
+            </div>
+          ) : (
+            <ul className="place-grid" aria-label="Ranked places">
+              {scoredPlaces.map(({ place, score }) => {
+                return (
+                  <li key={place.id} className="place-grid-item">
+                    <PlaceCard
+                      place={place}
+                      closishScore={score.closishScore}
+                      selected={selectedPlaceId === place.id}
+                      expanded={expandedPlaceId === place.id}
+                      onToggleExpand={handlePlaceCardToggle}
+                      showInlineMap={expandedPlaceId === place.id && selectedPlaceId === place.id}
+                      origin={activeOrigin}
+                      mapId={config.mapId}
+                      mapReady={Boolean(isLoaded && config.isMapConfigured && !loadError)}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
       </main>
     </div>
   );
