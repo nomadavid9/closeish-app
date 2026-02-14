@@ -36,6 +36,7 @@ const App: React.FC = () => {
   const [loadingPlaces, setLoadingPlaces] = useState<boolean>(false);
   const [placesSource, setPlacesSource] = useState<'mock' | 'live'>('mock');
   const [placesError, setPlacesError] = useState<string | null>(null);
+  const [enrichmentNotice, setEnrichmentNotice] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isMapFocused, setIsMapFocused] = useState<boolean>(false);
@@ -161,6 +162,7 @@ const App: React.FC = () => {
     const loadPlaces = async () => {
       setLoadingPlaces(true);
       setPlacesError(null);
+      setEnrichmentNotice(null);
       try {
         if (shouldUseLive && config.placesApiKey) {
           try {
@@ -188,9 +190,16 @@ const App: React.FC = () => {
 
                 const enrichedById = new Map(enrichedPlaces.filter((place) => place.transitPath).map((place) => [place.id, place]));
                 placesForRanking = liveResults.map((place) => enrichedById.get(place.id) ?? place);
+                const enrichmentCandidates = Math.min(TRANSIT_ENRICH_TOP_N, liveResults.length);
+                if (enrichedById.size < enrichmentCandidates) {
+                  setEnrichmentNotice(`Transit detail enrichment available for ${enrichedById.size}/${enrichmentCandidates} top candidates.`);
+                }
               } catch (error) {
                 console.warn('Transit enrichment failed; using baseline scoring', error);
+                setEnrichmentNotice('Transit detail enrichment is unavailable right now; showing baseline trip estimates.');
               }
+            } else {
+              setEnrichmentNotice('Routes API key missing; showing baseline trip estimates.');
             }
 
             setPlaces(placesForRanking);
@@ -209,11 +218,13 @@ const App: React.FC = () => {
           origin: activeOrigin,
           categoryFilter: categoryMap[filters.placeType],
         });
+        setEnrichmentNotice(null);
         setPlaces(mockResults);
         setPlacesSource('mock');
         setSelectedPlaceId((prev) => prev && mockResults.find((p) => p.id === prev) ? prev : null);
       } catch (error) {
         console.error('Error loading mock places', error);
+        setEnrichmentNotice(null);
         setPlaces([]);
         setPlacesSource('mock');
       } finally {
@@ -313,11 +324,31 @@ const App: React.FC = () => {
   }, [filters]);
 
   const usingCurrentLocation = Boolean(position && !originOverride);
+  const originInputDisabled = !isLoaded || Boolean(loadError) || !config.isMapConfigured;
+  const originStatusMessage = useMemo(() => {
+    if (requestingGeolocation) return 'Requesting your current location…';
+    if (!config.isMapConfigured) return 'Origin search unavailable: add Maps API key and Map ID.';
+    if (loadError) return 'Origin search unavailable: map libraries failed to load.';
+    if (!isLoaded) return 'Loading map libraries for origin search…';
+    return null;
+  }, [config.isMapConfigured, isLoaded, loadError, requestingGeolocation]);
+  const originStatusTone = !config.isMapConfigured || Boolean(loadError) ? 'note error' : 'note';
+  const resultsStatusMessage = useMemo(() => {
+    if (loadingPlaces) return 'Loading places…';
+    if (placesError) return placesError;
+    if (scoredPlaces.length === 0) return 'No places found for these filters yet.';
+    return 'Ranked locally; top candidates only.';
+  }, [loadingPlaces, placesError, scoredPlaces.length]);
+  const resultsStatusTone = placesError ? 'note error' : 'note';
+  const prefersReducedMotion = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }, []);
 
   useEffect(() => {
     if (!isMapFocused) return;
-    mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [isMapFocused]);
+    mapSectionRef.current?.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
+  }, [isMapFocused, prefersReducedMotion]);
 
   if (!activeOrigin) {
     return (
@@ -339,7 +370,7 @@ const App: React.FC = () => {
             <div className="landing-search">
               <PlaceAutocomplete
                 apiKey={config.mapApiKey ?? ''}
-                disabled={!isLoaded || Boolean(loadError) || !config.isMapConfigured}
+                disabled={originInputDisabled}
                 onPlaceSelected={handleOriginSelected}
                 onError={setOriginError}
               />
@@ -356,6 +387,7 @@ const App: React.FC = () => {
 
             {originError ? <p className="note error">{originError}</p> : null}
             {geoError ? <p className="note error">{geoError}</p> : null}
+            {originStatusMessage ? <p className={originStatusTone}>{originStatusMessage}</p> : null}
           </section>
         </main>
       </div>
@@ -392,7 +424,7 @@ const App: React.FC = () => {
               <p className="label">Origin</p>
               <PlaceAutocomplete
                 apiKey={config.mapApiKey ?? ''}
-                disabled={!isLoaded || Boolean(loadError) || !config.isMapConfigured}
+                disabled={originInputDisabled}
                 onPlaceSelected={handleOriginSelected}
                 onError={setOriginError}
               />
@@ -411,6 +443,7 @@ const App: React.FC = () => {
               </div>
               {originError ? <p className="note error">{originError}</p> : null}
               {geoError ? <p className="note error">{geoError}</p> : null}
+              {originStatusMessage ? <p className={originStatusTone}>{originStatusMessage}</p> : null}
             </div>
           </div>
 
@@ -553,11 +586,13 @@ const App: React.FC = () => {
               className={`chip ${isMapFocused ? 'selected' : ''}`}
               onClick={() => setIsMapFocused((prev) => !prev)}
               aria-pressed={isMapFocused}
+              aria-label={isMapFocused ? 'Exit focused map mode' : 'Enter focused map mode'}
+              aria-controls="main-map-surface"
             >
               {isMapFocused ? 'Exit focused map' : 'Focus map'}
             </button>
           </div>
-          <div className={`map-shell${isMapFocused ? ' focused' : ''}`}>{renderMapState()}</div>
+          <div id="main-map-surface" className={`map-shell${isMapFocused ? ' focused' : ''}`}>{renderMapState()}</div>
         </section>
 
         <section className="list-panel">
@@ -568,20 +603,15 @@ const App: React.FC = () => {
                 {placesSource === 'live' ? 'Live data' : 'Mock data'}
               </span>
             </div>
-            {loadingPlaces ? (
-              <p className="note">Loading…</p>
-            ) : placesError ? (
-              <p className="note error">{placesError}</p>
-            ) : (
-              <p className="note">Ranked locally; top candidates only.</p>
-            )}
+            <p id="results-status" className={resultsStatusTone} aria-live="polite">{resultsStatusMessage}</p>
           </div>
+          {enrichmentNotice ? <p className="note warning" aria-live="polite">{enrichmentNotice}</p> : null}
           {scoredPlaces.length === 0 && !loadingPlaces ? (
             <div className="empty">
               <p>No places found for these filters yet.</p>
             </div>
           ) : (
-            <ul className="place-grid" aria-label="Ranked places">
+            <ul className="place-grid" aria-label="Ranked places" aria-describedby="results-status">
               {scoredPlaces.map(({ place, score }) => {
                 return (
                   <li key={place.id} className="place-grid-item">

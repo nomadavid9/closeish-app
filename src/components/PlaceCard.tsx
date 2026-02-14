@@ -76,6 +76,10 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
   const tripSequence = trip.hasDetailedPath
     ? `${trip.accessWalkMinutes}m walk -> ${trip.transitMinutes}m transit -> ${trip.egressWalkMinutes}m walk`
     : `Estimated ${trip.totalMinutes}m total`;
+  const categoryLabel = formatCategory(place.category);
+  const tripSequenceId = `trip-sequence-${place.id}`;
+  const fallbackId = `trip-fallback-${place.id}`;
+  const cardLabel = `${place.name}, ${trip.totalMinutes} minutes total, ${categoryLabel}, closish score ${closishScore.toFixed(0)}.`;
 
   return (
     <article className={`place-card ${selected ? 'selected' : ''}`}>
@@ -84,6 +88,8 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
         className="place-card-trigger"
         onClick={() => onSelect(place.id)}
         aria-pressed={selected}
+        aria-label={cardLabel}
+        aria-describedby={trip.fallbackMessage ? `${tripSequenceId} ${fallbackId}` : tripSequenceId}
       >
         <div className="place-card-head">
           <p className="place-total">{trip.totalMinutes}m total</p>
@@ -91,7 +97,7 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
         </div>
 
         <p className="place-name">{place.name}</p>
-        <p className="place-note">{formatCategory(place.category)} · score {closishScore.toFixed(0)}</p>
+        <p className="place-note">{categoryLabel} · score {closishScore.toFixed(0)}</p>
 
         <div className="place-chip-row">
           <span className="place-chip">walk {trip.walkMinutesTotal}m</span>
@@ -104,8 +110,8 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
           <span className="place-chip">{place.source === 'live' ? 'live' : 'mock'}</span>
         </div>
 
-        <p className="trip-sequence">{tripSequence}</p>
-        {trip.fallbackMessage ? <p className="trip-fallback">{trip.fallbackMessage}</p> : null}
+        <p id={tripSequenceId} className="trip-sequence">{tripSequence}</p>
+        {trip.fallbackMessage ? <p id={fallbackId} className="trip-fallback">{trip.fallbackMessage}</p> : null}
       </button>
     </article>
   );
