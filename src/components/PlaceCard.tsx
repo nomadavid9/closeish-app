@@ -1,18 +1,11 @@
 import React from 'react';
-import InlineTripMap from './InlineTripMap';
-import { Coordinates } from '../types/geo';
 import { Place } from '../types/places';
 
 type PlaceCardProps = {
   place: Place;
   closishScore: number;
   selected: boolean;
-  expanded: boolean;
-  onToggleExpand: (placeId: string) => void;
-  showInlineMap: boolean;
-  origin: Coordinates | null;
-  mapId?: string;
-  mapReady: boolean;
+  onSelect: (placeId: string) => void;
 };
 
 type TripDetails = {
@@ -77,24 +70,20 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
   place,
   closishScore,
   selected,
-  expanded,
-  onToggleExpand,
-  showInlineMap,
-  origin,
-  mapId,
-  mapReady,
+  onSelect,
 }) => {
   const trip = getTripDetails(place);
-  const detailRegionId = `place-card-details-${place.id}`;
+  const tripSequence = trip.hasDetailedPath
+    ? `${trip.accessWalkMinutes}m walk -> ${trip.transitMinutes}m transit -> ${trip.egressWalkMinutes}m walk`
+    : `Estimated ${trip.totalMinutes}m total`;
 
   return (
     <article className={`place-card ${selected ? 'selected' : ''}`}>
       <button
         type="button"
         className="place-card-trigger"
-        onClick={() => onToggleExpand(place.id)}
-        aria-expanded={expanded}
-        aria-controls={detailRegionId}
+        onClick={() => onSelect(place.id)}
+        aria-pressed={selected}
       >
         <div className="place-card-head">
           <p className="place-total">{trip.totalMinutes}m total</p>
@@ -114,36 +103,10 @@ const PlaceCard: React.FC<PlaceCardProps> = ({
           ) : null}
           <span className="place-chip">{place.source === 'live' ? 'live' : 'mock'}</span>
         </div>
+
+        <p className="trip-sequence">{tripSequence}</p>
+        {trip.fallbackMessage ? <p className="trip-fallback">{trip.fallbackMessage}</p> : null}
       </button>
-
-      {expanded ? (
-        <div id={detailRegionId} className="place-card-details" role="region" aria-label={`${place.name} trip details`}>
-          {trip.hasDetailedPath ? (
-            <p className="trip-sequence">
-              {`${trip.accessWalkMinutes}m walk -> ${trip.transitMinutes}m transit -> ${trip.egressWalkMinutes}m walk`}
-            </p>
-          ) : (
-            <p className="trip-sequence">Estimated {trip.totalMinutes}m total</p>
-          )}
-
-          {trip.fallbackMessage ? <p className="trip-fallback">{trip.fallbackMessage}</p> : null}
-
-          {showInlineMap && origin && mapId && mapReady ? (
-            <div className="place-card-map-shell">
-              <InlineTripMap
-                origin={origin}
-                destination={place.location}
-                mapId={mapId}
-                isLoaded={mapReady}
-              />
-            </div>
-          ) : null}
-
-          {showInlineMap && (!mapReady || !mapId || !origin) ? (
-            <p className="trip-fallback">Map preview unavailable for this place right now.</p>
-          ) : null}
-        </div>
-      ) : null}
     </article>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import MapView from './components/MapView';
 import PlaceAutocomplete from './components/PlaceAutocomplete';
 import PlaceCard from './components/PlaceCard';
@@ -33,12 +33,13 @@ const App: React.FC = () => {
   const [filters, setFilters] = useState<FilterState>(filterDefaults);
   const [places, setPlaces] = useState<Place[]>([]);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
-  const [expandedPlaceId, setExpandedPlaceId] = useState<string | null>(null);
   const [loadingPlaces, setLoadingPlaces] = useState<boolean>(false);
   const [placesSource, setPlacesSource] = useState<'mock' | 'live'>('mock');
   const [placesError, setPlacesError] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isMapFocused, setIsMapFocused] = useState<boolean>(false);
+  const mapSectionRef = useRef<HTMLElement | null>(null);
 
   const config = useMemo(() => {
     const mapApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
@@ -94,7 +95,6 @@ const App: React.FC = () => {
     setOriginOverride(null);
     setOriginError(null);
     setSelectedPlaceId(null);
-    setExpandedPlaceId(null);
   }, []);
 
   const requestCurrentLocation = useCallback(() => {
@@ -111,7 +111,6 @@ const App: React.FC = () => {
         setOriginOverride(null);
         setOriginError(null);
         setSelectedPlaceId(null);
-        setExpandedPlaceId(null);
         setPosition({
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
@@ -134,12 +133,10 @@ const App: React.FC = () => {
     setOriginError(null);
     setGeoError(null);
     setSelectedPlaceId(null);
-    setExpandedPlaceId(null);
   }, []);
 
-  const handlePlaceCardToggle = useCallback((placeId: string) => {
+  const handlePlaceCardSelect = useCallback((placeId: string) => {
     setSelectedPlaceId(placeId);
-    setExpandedPlaceId((prev) => (prev === placeId ? null : placeId));
   }, []);
 
   const handleUseCurrentLocation = useCallback(() => {
@@ -199,7 +196,6 @@ const App: React.FC = () => {
             setPlaces(placesForRanking);
             setPlacesSource('live');
             setSelectedPlaceId((prev) => prev && placesForRanking.find((p) => p.id === prev) ? prev : null);
-            setExpandedPlaceId((prev) => prev && placesForRanking.find((p) => p.id === prev) ? prev : null);
             return;
           } catch (error) {
             console.warn('Live places failed, falling back to mock', error);
@@ -216,12 +212,10 @@ const App: React.FC = () => {
         setPlaces(mockResults);
         setPlacesSource('mock');
         setSelectedPlaceId((prev) => prev && mockResults.find((p) => p.id === prev) ? prev : null);
-        setExpandedPlaceId((prev) => prev && mockResults.find((p) => p.id === prev) ? prev : null);
       } catch (error) {
         console.error('Error loading mock places', error);
         setPlaces([]);
         setPlacesSource('mock');
-        setExpandedPlaceId(null);
       } finally {
         setLoadingPlaces(false);
       }
@@ -319,6 +313,11 @@ const App: React.FC = () => {
   }, [filters]);
 
   const usingCurrentLocation = Boolean(position && !originOverride);
+
+  useEffect(() => {
+    if (!isMapFocused) return;
+    mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [isMapFocused]);
 
   if (!activeOrigin) {
     return (
@@ -541,7 +540,25 @@ const App: React.FC = () => {
           </div>
         </details>
 
-        <section className="map-shell">{renderMapState()}</section>
+        <section ref={mapSectionRef} className="map-section">
+          <div className="map-toolbar">
+            <div>
+              <p className="label">Map</p>
+              <p className="note">
+                {selectedPlace ? `Focused on ${selectedPlace.name}` : 'Select a place card to update the destination marker.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              className={`chip ${isMapFocused ? 'selected' : ''}`}
+              onClick={() => setIsMapFocused((prev) => !prev)}
+              aria-pressed={isMapFocused}
+            >
+              {isMapFocused ? 'Exit focused map' : 'Focus map'}
+            </button>
+          </div>
+          <div className={`map-shell${isMapFocused ? ' focused' : ''}`}>{renderMapState()}</div>
+        </section>
 
         <section className="list-panel">
           <div className="list-header">
@@ -572,12 +589,7 @@ const App: React.FC = () => {
                       place={place}
                       closishScore={score.closishScore}
                       selected={selectedPlaceId === place.id}
-                      expanded={expandedPlaceId === place.id}
-                      onToggleExpand={handlePlaceCardToggle}
-                      showInlineMap={expandedPlaceId === place.id && selectedPlaceId === place.id}
-                      origin={activeOrigin}
-                      mapId={config.mapId}
-                      mapReady={Boolean(isLoaded && config.isMapConfigured && !loadError)}
+                      onSelect={handlePlaceCardSelect}
                     />
                   </li>
                 );
