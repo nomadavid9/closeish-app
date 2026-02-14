@@ -32,6 +32,7 @@ const App: React.FC = () => {
   const [filters, setFilters] = useState<FilterState>(filterDefaults);
   const [places, setPlaces] = useState<Place[]>([]);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [expandedPlaceId, setExpandedPlaceId] = useState<string | null>(null);
   const [loadingPlaces, setLoadingPlaces] = useState<boolean>(false);
   const [placesSource, setPlacesSource] = useState<'mock' | 'live'>('mock');
   const [placesError, setPlacesError] = useState<string | null>(null);
@@ -111,12 +112,19 @@ const App: React.FC = () => {
     setOriginOverride(null);
     setOriginError(null);
     setSelectedPlaceId(null);
+    setExpandedPlaceId(null);
   };
 
   const handleOriginSelected = useCallback((selection: { label: string; coordinates: Coordinates }) => {
     setOriginOverride(selection);
     setOriginError(null);
     setSelectedPlaceId(null);
+    setExpandedPlaceId(null);
+  }, []);
+
+  const handlePlaceCardToggle = useCallback((placeId: string) => {
+    setSelectedPlaceId(placeId);
+    setExpandedPlaceId((prev) => (prev === placeId ? null : placeId));
   }, []);
 
   useEffect(() => {
@@ -168,6 +176,7 @@ const App: React.FC = () => {
             setPlaces(placesForRanking);
             setPlacesSource('live');
             setSelectedPlaceId((prev) => prev && placesForRanking.find((p) => p.id === prev) ? prev : null);
+            setExpandedPlaceId((prev) => prev && placesForRanking.find((p) => p.id === prev) ? prev : null);
             return;
           } catch (error) {
             console.warn('Live places failed, falling back to mock', error);
@@ -184,10 +193,12 @@ const App: React.FC = () => {
         setPlaces(mockResults);
         setPlacesSource('mock');
         setSelectedPlaceId((prev) => prev && mockResults.find((p) => p.id === prev) ? prev : null);
+        setExpandedPlaceId((prev) => prev && mockResults.find((p) => p.id === prev) ? prev : null);
       } catch (error) {
         console.error('Error loading mock places', error);
         setPlaces([]);
         setPlacesSource('mock');
+        setExpandedPlaceId(null);
       } finally {
         setLoadingPlaces(false);
       }
@@ -471,7 +482,12 @@ const App: React.FC = () => {
                         place={place}
                         closishScore={score.closishScore}
                         selected={selectedPlaceId === place.id}
-                        onSelect={setSelectedPlaceId}
+                        expanded={expandedPlaceId === place.id}
+                        onToggleExpand={handlePlaceCardToggle}
+                        showInlineMap={expandedPlaceId === place.id && selectedPlaceId === place.id}
+                        origin={activeOrigin}
+                        mapId={config.mapId}
+                        mapReady={Boolean(isLoaded && config.isMapConfigured && !loadError)}
                       />
                     </li>
                   );
