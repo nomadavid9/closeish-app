@@ -26,6 +26,7 @@ type OriginOverride = {
 
 const App: React.FC = () => {
   const [position, setPosition] = useState<Coordinates | null>(null);
+  const [requestingGeolocation, setRequestingGeolocation] = useState<boolean>(false);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [originOverride, setOriginOverride] = useState<OriginOverride | null>(null);
   const [originError, setOriginError] = useState<string | null>(null);
@@ -80,25 +81,6 @@ const App: React.FC = () => {
     };
   }, [config.mapApiKey]);
 
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setGeoError('Geolocation is not supported by this browser.');
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setPosition({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        });
-      },
-      (error) => {
-        setGeoError(`Error getting location: ${error.message}`);
-      }
-    );
-  }, []);
-
   const setFilter = <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
@@ -108,16 +90,49 @@ const App: React.FC = () => {
     [originOverride, position]
   );
 
-  const clearOriginOverride = () => {
+  const clearOriginOverride = useCallback(() => {
     setOriginOverride(null);
     setOriginError(null);
     setSelectedPlaceId(null);
     setExpandedPlaceId(null);
-  };
+  }, []);
+
+  const requestCurrentLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setGeoError('Geolocation is not supported by this browser.');
+      return;
+    }
+
+    setRequestingGeolocation(true);
+    setGeoError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setOriginOverride(null);
+        setOriginError(null);
+        setSelectedPlaceId(null);
+        setExpandedPlaceId(null);
+        setPosition({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+        setRequestingGeolocation(false);
+      },
+      (error) => {
+        const message =
+          error.code === error.PERMISSION_DENIED
+            ? 'Location permission denied. You can continue by searching an origin.'
+            : `Error getting location: ${error.message}`;
+        setGeoError(message);
+        setRequestingGeolocation(false);
+      }
+    );
+  }, []);
 
   const handleOriginSelected = useCallback((selection: { label: string; coordinates: Coordinates }) => {
     setOriginOverride(selection);
     setOriginError(null);
+    setGeoError(null);
     setSelectedPlaceId(null);
     setExpandedPlaceId(null);
   }, []);
@@ -126,6 +141,14 @@ const App: React.FC = () => {
     setSelectedPlaceId(placeId);
     setExpandedPlaceId((prev) => (prev === placeId ? null : placeId));
   }, []);
+
+  const handleUseCurrentLocation = useCallback(() => {
+    if (position) {
+      clearOriginOverride();
+      return;
+    }
+    requestCurrentLocation();
+  }, [position, requestCurrentLocation, clearOriginOverride]);
 
   useEffect(() => {
     if (!activeOrigin) return;
@@ -290,6 +313,51 @@ const App: React.FC = () => {
     return `${filters.liveMode ? 'Live' : 'Plan'} · ${placeLabel} · ${timeLabel} · ${walkLabel} · Max walk ${filters.maxWalkMinutes} min`;
   }, [filters]);
 
+  const usingCurrentLocation = Boolean(position && !originOverride);
+
+  if (!activeOrigin) {
+    return (
+      <div className="app-shell">
+        <header className="app-header">
+          <div>
+            <p className="eyebrow">Closeish.app</p>
+            <h1>Transit-first discovery</h1>
+            <p className="tagline">Find places that are unexpectedly easy to reach by transit.</p>
+          </div>
+        </header>
+
+        <main className="landing-main">
+          <section className="landing-card">
+            <p className="eyebrow">Start Here</p>
+            <h2>Choose your origin</h2>
+            <p className="muted">Search any place or use your current location to begin discovery.</p>
+
+            <div className="landing-search">
+              <PlaceAutocomplete
+                apiKey={config.mapApiKey ?? ''}
+                disabled={!isLoaded || Boolean(loadError) || !config.isMapConfigured}
+                onPlaceSelected={handleOriginSelected}
+                onError={setOriginError}
+              />
+            </div>
+
+            <button
+              type="button"
+              className="pill live landing-location-cta"
+              onClick={requestCurrentLocation}
+              disabled={requestingGeolocation}
+            >
+              {requestingGeolocation ? 'Locating…' : 'Use my location'}
+            </button>
+
+            {originError ? <p className="note error">{originError}</p> : null}
+            {geoError ? <p className="note error">{geoError}</p> : null}
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -327,14 +395,20 @@ const App: React.FC = () => {
                 onError={setOriginError}
               />
               <div className="origin-actions">
-                <button type="button" className="chip" onClick={clearOriginOverride} disabled={!originOverride}>
-                  Use current location
+                <button
+                  type="button"
+                  className="chip"
+                  onClick={handleUseCurrentLocation}
+                  disabled={requestingGeolocation || usingCurrentLocation}
+                >
+                  {requestingGeolocation ? 'Locating…' : 'Use current location'}
                 </button>
                 <p className="note">
                   {originOverride ? `Override: ${originOverride.label}` : 'Default: current geolocation'}
                 </p>
               </div>
               {originError ? <p className="note error">{originError}</p> : null}
+              {geoError ? <p className="note error">{geoError}</p> : null}
             </div>
 
             <div className="control">
