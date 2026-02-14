@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import MapView from './components/MapView';
 import PlaceAutocomplete from './components/PlaceAutocomplete';
+import PlaceCard from './components/PlaceCard';
 import { Coordinates } from './types/geo';
 import {
   FilterState,
@@ -462,32 +463,16 @@ const App: React.FC = () => {
                 <p>No places found for these filters yet.</p>
               </div>
             ) : (
-              <ul className="place-list">
+              <ul className="place-grid" aria-label="Ranked places">
                 {scoredPlaces.map(({ place, score }) => {
-                  const transitMinutes = place.transitPath?.totalMinutes ?? place.travel.transitMinutes;
-                  const walkMinutes = place.transitPath
-                    ? (place.transitPath.accessWalkMinutes ?? 0) +
-                      (place.transitPath.transferWalkMinutes ?? 0) +
-                      (place.transitPath.egressWalkMinutes ?? 0)
-                    : place.travel.walkMinutes;
-
                   return (
-                    <li
-                      key={place.id}
-                      className={`place-item ${selectedPlaceId === place.id ? 'selected' : ''}`}
-                      onClick={() => setSelectedPlaceId(place.id)}
-                    >
-                      <div className="place-main">
-                        <p className="value">{place.name}</p>
-                        <p className="note">{place.category} · score {score.closishScore.toFixed(0)}</p>
-                      </div>
-                      <div className="place-meta">
-                        <span>{transitMinutes}m transit</span>
-                        <span>{walkMinutes}m walk</span>
-                        {place.transitPath ? (
-                          <span>{place.transitPath.transferCount ?? 0} transfer{(place.transitPath.transferCount ?? 0) === 1 ? '' : 's'}</span>
-                        ) : null}
-                      </div>
+                    <li key={place.id} className="place-grid-item">
+                      <PlaceCard
+                        place={place}
+                        closishScore={score.closishScore}
+                        selected={selectedPlaceId === place.id}
+                        onSelect={setSelectedPlaceId}
+                      />
                     </li>
                   );
                 })}

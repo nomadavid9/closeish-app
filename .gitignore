@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 .env.local
+
+# TypeScript incremental build artifacts
+*.tsbuildinfo
