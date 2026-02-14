@@ -39,6 +39,36 @@
   flex: 1;
 }
 
+.landing-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px 32px;
+}
+
+.landing-card {
+  width: 100%;
+  max-width: 620px;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.landing-search {
+  margin-top: 8px;
+}
+
+.landing-location-cta {
+  margin-top: 6px;
+  justify-content: center;
+}
+
 .panel {
   background: #ffffff;
   border: 1px solid rgba(15, 23, 42, 0.08);
