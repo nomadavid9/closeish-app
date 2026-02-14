@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import MapView from './components/MapView';
 import PlaceAutocomplete from './components/PlaceAutocomplete';
 import PlaceCard from './components/PlaceCard';
@@ -38,6 +38,8 @@ const App: React.FC = () => {
   const [placesError, setPlacesError] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isMapFocused, setIsMapFocused] = useState<boolean>(false);
+  const mapSectionRef = useRef<HTMLElement | null>(null);
 
   const config = useMemo(() => {
     const mapApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
@@ -312,6 +314,11 @@ const App: React.FC = () => {
 
   const usingCurrentLocation = Boolean(position && !originOverride);
 
+  useEffect(() => {
+    if (!isMapFocused) return;
+    mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [isMapFocused]);
+
   if (!activeOrigin) {
     return (
       <div className="app-shell">
@@ -533,7 +540,25 @@ const App: React.FC = () => {
           </div>
         </details>
 
-        <section className="map-shell">{renderMapState()}</section>
+        <section ref={mapSectionRef} className="map-section">
+          <div className="map-toolbar">
+            <div>
+              <p className="label">Map</p>
+              <p className="note">
+                {selectedPlace ? `Focused on ${selectedPlace.name}` : 'Select a place card to update the destination marker.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              className={`chip ${isMapFocused ? 'selected' : ''}`}
+              onClick={() => setIsMapFocused((prev) => !prev)}
+              aria-pressed={isMapFocused}
+            >
+              {isMapFocused ? 'Exit focused map' : 'Focus map'}
+            </button>
+          </div>
+          <div className={`map-shell${isMapFocused ? ' focused' : ''}`}>{renderMapState()}</div>
+        </section>
 
         <section className="list-panel">
           <div className="list-header">
