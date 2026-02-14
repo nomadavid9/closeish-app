@@ -356,21 +356,6 @@
   background: rgba(15, 23, 42, 0.03);
 }
 
-.place-main {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.place-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 13px;
-  color: rgba(15, 23, 42, 0.7);
-  text-align: right;
-}
-
 .empty {
   padding: 12px;
   color: rgba(15, 23, 42, 0.65);
