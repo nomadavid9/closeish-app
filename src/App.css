@@ -264,36 +264,96 @@
   gap: 8px;
 }
 
-.place-list {
+.place-grid {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 8px;
 }
 
-.place-item {
+.place-grid-item {
+  min-width: 0;
+}
+
+.place-card {
+  width: 100%;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 10px;
   padding: 10px 12px;
   background: #fff;
   cursor: pointer;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  color: var(--ink);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.place-item:hover {
+.place-card:hover {
   border-color: rgba(22, 61, 109, 0.3);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
 }
 
-.place-item.selected {
+.place-card.selected {
   border-color: rgba(22, 61, 109, 0.4);
   background: rgba(22, 61, 109, 0.06);
+}
+
+.place-card:focus-visible {
+  outline: 2px solid rgba(22, 61, 109, 0.5);
+  outline-offset: 2px;
+}
+
+.place-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.place-total {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.place-rating {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(15, 23, 42, 0.72);
+}
+
+.place-name {
+  margin: 0;
+  font-weight: 600;
+}
+
+.place-note {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(15, 23, 42, 0.68);
+}
+
+.place-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.place-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.75);
+  background: rgba(15, 23, 42, 0.03);
 }
 
 .place-main {
@@ -398,5 +458,17 @@
   .map-shell {
     flex: 2;
     min-height: 70vh;
+  }
+}
+
+@media (min-width: 620px) {
+  .place-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1120px) {
+  .place-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
