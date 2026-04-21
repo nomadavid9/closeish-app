@@ -41,6 +41,7 @@ const App: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isMapFocused, setIsMapFocused] = useState<boolean>(false);
   const mapSectionRef = useRef<HTMLElement | null>(null);
+  const originSearchPlaceholder = 'Search address, landmark, or neighborhood to begin discovery';
 
   const config = useMemo(() => {
     const mapApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
@@ -352,25 +353,21 @@ const App: React.FC = () => {
 
   if (!activeOrigin) {
     return (
-      <div className="app-shell">
-        <header className="app-header">
-          <div>
-            <p className="eyebrow">Closeish.app</p>
-            <h1>Transit-first discovery</h1>
-            <p className="tagline">Find places that are unexpectedly easy to reach by transit.</p>
-          </div>
-        </header>
-
+      <div className="app-shell landing-shell">
         <main className="landing-main">
-          <section className="landing-card">
-            <p className="eyebrow">Start Here</p>
-            <h2>Choose your origin</h2>
-            <p className="muted">Search any place or use your current location to begin discovery.</p>
+          <section className="landing-hero" aria-labelledby="landing-brand">
+            <div className="landing-brand">
+              <h1 id="landing-brand" className="landing-wordmark">
+                CLOSE<span className="brand-ish">ISH</span>
+              </h1>
+              <p className="brand-subtitle">Transit-first discovery</p>
+            </div>
 
             <div className="landing-search">
               <PlaceAutocomplete
                 apiKey={config.mapApiKey ?? ''}
                 disabled={originInputDisabled}
+                placeholder={originSearchPlaceholder}
                 onPlaceSelected={handleOriginSelected}
                 onError={setOriginError}
               />
@@ -385,6 +382,8 @@ const App: React.FC = () => {
               {requestingGeolocation ? 'Locating…' : 'Use my location'}
             </button>
 
+            <p className="landing-search-note">Find places that are unexpectedly easy to reach by transit.</p>
+
             {originError ? <p className="note error">{originError}</p> : null}
             {geoError ? <p className="note error">{geoError}</p> : null}
             {originStatusMessage ? <p className={originStatusTone}>{originStatusMessage}</p> : null}
@@ -397,9 +396,11 @@ const App: React.FC = () => {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div>
-          <p className="eyebrow">Closeish.app</p>
-          <h1>Transit-first discovery</h1>
+        <div className="brand-block">
+          <h1 className="brand-mark">
+            CLOSE<span className="brand-ish">ISH</span>
+          </h1>
+          <p className="brand-subtitle">Transit-first discovery</p>
           <p className="tagline">Find places that are unexpectedly easy to reach by transit.</p>
         </div>
       </header>
@@ -425,6 +426,7 @@ const App: React.FC = () => {
               <PlaceAutocomplete
                 apiKey={config.mapApiKey ?? ''}
                 disabled={originInputDisabled}
+                placeholder={originSearchPlaceholder}
                 onPlaceSelected={handleOriginSelected}
                 onError={setOriginError}
               />

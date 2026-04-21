@@ -8,14 +8,15 @@
     var(--sand);
 }
 
-.app-header {
-  padding: 24px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+.app-shell.landing-shell {
+  background: #202124;
+  color: #e8eaed;
 }
 
-.app-header h1 {
-  margin: 4px 0 8px;
-  font-size: 24px;
+.app-header {
+  width: min(1240px, 100%);
+  margin: 0 auto;
+  padding: 20px 16px 8px;
 }
 
 .eyebrow {
@@ -29,6 +30,34 @@
 .tagline {
   margin: 0;
   color: rgba(15, 23, 42, 0.75);
+  font-size: clamp(0.98rem, 1.7vw, 1.2rem);
+}
+
+.brand-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.brand-mark {
+  margin: 0;
+  color: var(--navy);
+  letter-spacing: 0.03em;
+  font-size: clamp(1.7rem, 3.2vw, 2.45rem);
+  line-height: 1.02;
+  font-weight: 800;
+}
+
+.brand-ish {
+  font-style: italic;
+  font-size: 0.84em;
+}
+
+.brand-subtitle {
+  margin: 0;
+  color: rgba(15, 23, 42, 0.86);
+  font-size: clamp(1.02rem, 2.2vw, 1.45rem);
+  font-weight: 600;
 }
 
 .app-body {
@@ -46,29 +75,54 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px 32px;
+  padding: 24px 16px 56px;
 }
 
-.landing-card {
+.landing-hero {
   width: 100%;
-  max-width: 620px;
-  background: #fff;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 18px;
-  padding: 20px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+  max-width: 820px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.landing-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.landing-wordmark {
+  margin: 0;
+  color: #e8eaed;
+  line-height: 0.96;
+  letter-spacing: 0.01em;
+  font-size: clamp(3.25rem, 9vw, 6.8rem);
+  font-weight: 700;
 }
 
 .landing-search {
-  margin-top: 8px;
+  width: 100%;
+  max-width: 760px;
+  margin-top: 2px;
 }
 
 .landing-location-cta {
   margin-top: 6px;
   justify-content: center;
+  min-width: 220px;
+}
+
+.landing-search-note {
+  margin: 10px 0 0;
+  max-width: 760px;
+  color: #bdc1c6;
+  font-size: clamp(0.92rem, 1.45vw, 1.05rem);
+  font-weight: 400;
+  line-height: 1.45;
 }
 
 .panel {
@@ -255,6 +309,66 @@
 .place-autocomplete-host.disabled {
   opacity: 0.65;
   pointer-events: none;
+}
+
+.landing-shell .place-autocomplete-host gmp-place-autocomplete {
+  color-scheme: dark;
+}
+
+.landing-shell .place-autocomplete-host gmp-place-autocomplete::part(container) {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #4d5156;
+}
+
+.landing-shell .place-autocomplete-host gmp-place-autocomplete::part(input) {
+  color: #e8eaed;
+  padding: 13px 20px;
+  font-size: 1.15rem;
+}
+
+.landing-shell .place-autocomplete-host gmp-place-autocomplete::part(input):focus-visible {
+  outline: 2px solid rgba(138, 180, 248, 0.75);
+}
+
+.landing-shell .place-autocomplete-host gmp-place-autocomplete::part(prediction-list) {
+  background: #303134;
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+.landing-shell .place-autocomplete-host gmp-place-autocomplete::part(prediction-item-main-text) {
+  color: #e8eaed;
+}
+
+.landing-shell .place-autocomplete-host gmp-place-autocomplete::part(prediction-item-icon),
+.landing-shell .place-autocomplete-host gmp-place-autocomplete::part(prediction-item-match) {
+  color: #8ab4f8;
+}
+
+.landing-shell .landing-location-cta {
+  background: #303134;
+  color: #e8eaed;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.landing-shell .brand-subtitle {
+  color: #9aa0a6;
+  font-weight: 500;
+}
+
+.landing-shell .tagline {
+  color: #bdc1c6;
+  font-size: clamp(0.93rem, 1.4vw, 1.05rem);
+}
+
+.landing-shell .note,
+.landing-shell .muted {
+  color: #bdc1c6;
+}
+
+.landing-shell .note.error {
+  color: #f28b82;
 }
 
 .chip-group {
