@@ -6,6 +6,8 @@ See `@PROFILE.md` (Workspace level) for who's working on this and how to pitch e
 
 ## Docs layout
 
+- `docs/SETUP.md` — local dev environment setup (Node, API keys, running the app). Point new contributors here first.
+- `docs/START_HERE.md` — new-developer onboarding doc, pitched at a C#/ASP.NET MVC background. Read after `SETUP.md`.
 - `docs/v1/` — original planning docs, flat files, SCREAMING_SNAKE names (`MASTER_PLAN.md`, `CONTRIBUTING.md`, etc).
 - `docs/v2/planning/` — numbered narrative docs for the current transit redesign (`01-current-architecture.md` is the best orientation read; start there).
 - `docs/v2/jira_stories/` — one file per ticket, driving the redesign implementation.
