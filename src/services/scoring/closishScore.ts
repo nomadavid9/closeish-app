@@ -20,7 +20,7 @@ export const scorePlace = (place: Place, filters: FilterState): PlaceScore => {
 
   if (!place.transitPath) {
     const transitBias = clamp((place.travel.driveMinutes - place.travel.transitMinutes) * 4, 0, 40);
-    const walkPenalty = clamp((place.travel.walkMinutes - filters.maxWalkMinutes) * 2, -20, 0);
+    const walkPenalty = clamp((place.travel.walkMinutes - filters.maxTotalWalkMinutes) * 2, -20, 0);
     const closishScore = clamp((transitBias * preferenceTilt * modeTilt * whenTilt) + walkPenalty + desirability, 0, 100);
 
     return {
@@ -38,7 +38,7 @@ export const scorePlace = (place: Place, filters: FilterState): PlaceScore => {
 
   // Option A bridge: favor simple transit paths (low transfer and low walk friction).
   const totalWalkMinutes = accessWalkMinutes + transferWalkMinutes + egressWalkMinutes;
-  const walkPenalty = clamp((totalWalkMinutes - filters.maxWalkMinutes) * 2.2, -20, 0);
+  const walkPenalty = clamp((totalWalkMinutes - filters.maxTotalWalkMinutes) * 2.2, -20, 0);
   const transferPenalty = clamp(transferCount * 8, 0, 30);
   const waitPenalty = clamp(waitMinutes * 0.7, 0, 20);
   const transitTimePenalty = clamp((totalTransitMinutes - 40) * 0.25, 0, 10);

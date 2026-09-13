@@ -237,7 +237,7 @@ const App: React.FC = () => {
   }, [filters.liveMode, filters.placeType, activeOrigin, config.isPlacesConfigured, config.placesApiKey, config.routesApiKey]);
 
   const scoredPlaces = useMemo(() => {
-    const filtered = places.filter((place) => place.travel.walkMinutes <= filters.maxWalkMinutes + 10);
+    const filtered = places.filter((place) => place.travel.walkMinutes <= filters.maxTotalWalkMinutes + 10);
     const scored = filtered.map((place) => ({ place, score: scorePlace(place, filters) }));
     scored.sort((a, b) => b.score.closishScore - a.score.closishScore);
     return scored.slice(0, PLACES_TOP_K);
@@ -321,7 +321,7 @@ const App: React.FC = () => {
         ? 'Now'
         : timeWindowOptions.find((opt) => opt.value === filters.timeWindow)?.label ?? 'Later';
 
-    return `${filters.liveMode ? 'Live' : 'Plan'} · ${placeLabel} · ${timeLabel} · ${walkLabel} · Max walk ${filters.maxWalkMinutes} min`;
+    return `${filters.liveMode ? 'Live' : 'Plan'} · ${placeLabel} · ${timeLabel} · ${walkLabel} · Max walk ${filters.maxTotalWalkMinutes} min`;
   }, [filters]);
 
   const usingCurrentLocation = Boolean(position && !originOverride);
@@ -518,10 +518,10 @@ const App: React.FC = () => {
                 min={5}
                 max={30}
                 step={5}
-                value={filters.maxWalkMinutes}
-                onChange={(e) => setFilter('maxWalkMinutes', Number(e.target.value))}
+                value={filters.maxTotalWalkMinutes}
+                onChange={(e) => setFilter('maxTotalWalkMinutes', Number(e.target.value))}
               />
-              <p className="note">Currently: {filters.maxWalkMinutes} min</p>
+              <p className="note">Currently: {filters.maxTotalWalkMinutes} min</p>
             </div>
           </div>
         </section>
